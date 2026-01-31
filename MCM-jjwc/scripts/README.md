@@ -8,6 +8,7 @@
 
 快速使用
 - `python perturbation_sim.py --trials 5000 --seed 42`
+- `python perturbation_sim.py --no-fault --trials 1`
 - `python perturbation_sim.py --dump-config > config.json`
 - `python perturbation_sim.py --config config.json --se-share 0.6 --output ../output/perturbation_trials.csv`
 
@@ -17,6 +18,7 @@
 - `--se-share`: M_goal 中分配给电梯的比例
 - `--m-se`: 直接指定电梯质量(优先于 se-share)
 - `--output`: 输出逐次样本 CSV
+- `--no-fault`: 无故障模式(摆动/故障/损坏均视为 0)
 
 配置字段概览
 - `base`: 基础参数(单位与论文一致)

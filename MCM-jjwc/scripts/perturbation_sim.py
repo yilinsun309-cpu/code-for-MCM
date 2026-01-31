@@ -207,7 +207,13 @@ def percentile(values: List[float], q: float) -> float:
     return values[lower] * (1.0 - weight) + values[upper] * weight
 
 
-def simulate(config: Dict[str, Any], trials: int, seed: int, m_se: float) -> List[TrialResult]:
+def simulate(
+    config: Dict[str, Any],
+    trials: int,
+    seed: int,
+    m_se: float,
+    no_fault: bool,
+) -> List[TrialResult]:
     rng = random.Random(seed)
     base = config["base"]
     uncertainty = config["uncertainty"]
@@ -223,9 +229,19 @@ def simulate(config: Dict[str, Any], trials: int, seed: int, m_se: float) -> Lis
 
     results: List[TrialResult] = []
     for _ in range(trials):
-        f_osc = oscillation_factor(uncertainty["oscillation"], rng)
-        f_dmg, damage_cost, repair_years = elevator_damage_factor(uncertainty["elevator"], rng)
-        a_mech = mech_availability(uncertainty["elevator"], rng)
+        if no_fault:
+            f_osc = 1.0
+            f_dmg = 1.0
+            damage_cost = 0.0
+            repair_years = 0.0
+            a_mech = 1.0
+        else:
+            f_osc = oscillation_factor(uncertainty["oscillation"], rng)
+            f_dmg, damage_cost, repair_years = elevator_damage_factor(
+                uncertainty["elevator"],
+                rng,
+            )
+            a_mech = mech_availability(uncertainty["elevator"], rng)
         cap_se_eff = cap_se * a_mech * f_osc * f_dmg
         if cap_se_eff <= 0.0 and m_se > 0:
             t_se = float("inf")
@@ -234,17 +250,26 @@ def simulate(config: Dict[str, Any], trials: int, seed: int, m_se: float) -> Lis
         if math.isfinite(t_se):
             t_se += repair_years
 
-        p_f, p_p, a_rocket = rocket_rates(uncertainty["rocket"], f_total, rng)
-        alpha = float(uncertainty["rocket"]["alpha"])
-        m_eff = cap_rock * (1.0 - p_f - alpha * p_p)
-        m_eff = max(m_eff, 1e-6)
+        if no_fault:
+            p_f = 0.0
+            p_p = 0.0
+            a_rocket = 1.0
+            m_eff = cap_rock
+        else:
+            p_f, p_p, a_rocket = rocket_rates(uncertainty["rocket"], f_total, rng)
+            alpha = float(uncertainty["rocket"]["alpha"])
+            m_eff = cap_rock * (1.0 - p_f - alpha * p_p)
+            m_eff = max(m_eff, 1e-6)
         n_rock = math.ceil(m_rocket_target / m_eff) if m_rocket_target > 0 else 0
         f_eff = f_total * a_rocket
         t_rocket = (n_rock / f_eff) if f_eff > 0 else float("inf")
 
-        p_mishap = p_f + p_p
-        mishap_count = sample_poisson(n_rock * p_mishap, rng)
-        cost_mishap = mishap_count * float(uncertainty["rocket"]["C_mishap"])
+        if no_fault:
+            cost_mishap = 0.0
+        else:
+            p_mishap = p_f + p_p
+            mishap_count = sample_poisson(n_rock * p_mishap, rng)
+            cost_mishap = mishap_count * float(uncertainty["rocket"]["C_mishap"])
 
         t_total = max(t_se, t_rocket)
         cost = m_se * c_elec_unit + n_rock * c_launch + t_total * c_maint + c_fixed
@@ -325,6 +350,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--se-share", type=float, default=0.5)
     parser.add_argument("--m-se", type=float, default=None)
     parser.add_argument("--output", type=Path, default=None)
+    parser.add_argument("--no-fault", action="store_true")
     return parser.parse_args()
 
 
@@ -342,7 +368,7 @@ def main() -> None:
     else:
         m_se = float(args.m_se)
 
-    results = simulate(config, args.trials, args.seed, m_se)
+    results = simulate(config, args.trials, args.seed, m_se, args.no_fault)
     summary = summarize(results)
     print(json.dumps(summary, indent=2))
 
