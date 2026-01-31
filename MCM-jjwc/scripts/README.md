@@ -23,3 +23,20 @@
 - `uncertainty.oscillation`: 摆动折减
 - `uncertainty.rocket`: 故障概率与停飞
 - `uncertainty.elevator`: 机械可用度与损坏
+
+输出说明
+- 控制台 JSON
+  - `trials`: 模拟次数
+  - `infeasible`: 不可行次数(有效运力为 0 或节奏为 0 造成工期无穷)
+  - `T_mean`/`T_p50`/`T_p90`: 总工期的均值/中位数/90 分位(年)
+  - `cost_mean`/`cost_p50`/`cost_p90`: 总成本的均值/中位数/90 分位(USD)
+  - `N_rock_mean`/`N_rock_p50`/`N_rock_p90`: 发射次数的均值/中位数/90 分位(次)
+- CSV 每行字段
+  - `T`: 单次模拟总工期(年)
+  - `cost`: 单次模拟总成本(USD)
+  - `N_rock`: 单次模拟发射次数(次)
+  - `f_osc`: 摆动折减因子
+  - `f_dmg`: 损坏折减因子
+  - `A_mech`: 电梯机械可用度
+  - `A_rocket`: 火箭可用度(含停飞折减)
+  - `M_rocket_target`: 分配给火箭的目标质量(吨)
