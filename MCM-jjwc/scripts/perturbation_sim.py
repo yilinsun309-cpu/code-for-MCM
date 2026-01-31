@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 
+# 默认配置：包含基础参数与不确定性参数
 DEFAULT_CONFIG: Dict[str, Any] = {
     "base": {
         "M_goal": 1.0e8,
@@ -69,6 +70,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
 }
 
 
+# 单次模拟结果结构
 @dataclass
 class TrialResult:
     T: float
@@ -81,6 +83,7 @@ class TrialResult:
     M_rocket_target: float
 
 
+# 递归更新配置字典，允许用户只覆盖部分字段
 def deep_update(base: Dict[str, Any], updates: Dict[str, Any]) -> Dict[str, Any]:
     for key, value in updates.items():
         if isinstance(value, dict) and isinstance(base.get(key), dict):
@@ -90,6 +93,7 @@ def deep_update(base: Dict[str, Any], updates: Dict[str, Any]) -> Dict[str, Any]
     return base
 
 
+# 读取用户配置并与默认配置合并
 def load_config(path: Path | None) -> Dict[str, Any]:
     config = json.loads(json.dumps(DEFAULT_CONFIG))
     if path is None:
@@ -99,6 +103,7 @@ def load_config(path: Path | None) -> Dict[str, Any]:
     return deep_update(config, user_cfg)
 
 
+# 计算电梯单位电费(若启用公式则按能耗推导)
 def compute_elec_unit(config: Dict[str, Any]) -> float:
     base = config["base"]
     formula = config["elec_formula"]
@@ -111,6 +116,7 @@ def compute_elec_unit(config: Dict[str, Any]) -> float:
     return (n_se * e_week * 52.0 * 1000.0 * p_elec) / cap_se
 
 
+# 用 Beta 分布采样概率类变量(均值+集中度控制波动)
 def sample_beta(mean: float, conc: float, rng: random.Random) -> float:
     mean = min(max(mean, 1e-6), 1.0 - 1e-6)
     conc = max(conc, 2.0)
@@ -119,6 +125,7 @@ def sample_beta(mean: float, conc: float, rng: random.Random) -> float:
     return rng.betavariate(a, b)
 
 
+# 采样正态分布并截断为正值(避免 MTBF/MTTR 等出现负数)
 def sample_positive_normal(mu: float, sigma: float, rng: random.Random) -> float:
     if sigma <= 0:
         return max(mu, 1e-6)
@@ -126,6 +133,7 @@ def sample_positive_normal(mu: float, sigma: float, rng: random.Random) -> float
     return max(value, 1e-6)
 
 
+# 采样泊松分布(用于碰撞事件次数)
 def sample_poisson(mu: float, rng: random.Random) -> int:
     if mu <= 0:
         return 0
@@ -138,6 +146,7 @@ def sample_poisson(mu: float, rng: random.Random) -> int:
     return k - 1
 
 
+# 摆动折减因子：角度分段或超阈值概率两种模式
 def oscillation_factor(cfg: Dict[str, Any], rng: random.Random) -> float:
     model = cfg.get("model", "angle")
     theta1 = float(cfg["theta1"])
@@ -161,6 +170,8 @@ def oscillation_factor(cfg: Dict[str, Any], rng: random.Random) -> float:
     return total / float(samples)
 
 
+# 电梯损伤折减：基于 MMOD 撞击泊松过程
+# 返回值：折减因子、一次性维修成本、严重损伤修复时间
 def elevator_damage_factor(cfg: Dict[str, Any], rng: random.Random) -> Tuple[float, float, float]:
     mu = float(cfg["mu"])
     mu_cut = float(cfg["mu_cut"])
@@ -174,12 +185,15 @@ def elevator_damage_factor(cfg: Dict[str, Any], rng: random.Random) -> Tuple[flo
     return 1.0, 0.0, 0.0
 
 
+# 电梯机械可用度：MTBF/(MTBF+MTTR)
 def mech_availability(cfg: Dict[str, Any], rng: random.Random) -> float:
     mtbf = sample_positive_normal(float(cfg["MTBF"]), float(cfg["MTBF_sigma"]), rng)
     mttr = sample_positive_normal(float(cfg["MTTR"]), float(cfg["MTTR_sigma"]), rng)
     return mtbf / (mtbf + mttr)
 
 
+# 火箭故障扰动：抽样完全失败/部分失败与停飞折减
+# 返回值：完全失败率、部分失败率、可用度(节奏折减)
 def rocket_rates(cfg: Dict[str, Any], f_total: float, rng: random.Random) -> Tuple[float, float, float]:
     p_f = sample_beta(float(cfg["p_f"]), float(cfg["p_conc"]), rng)
     p_p = sample_beta(float(cfg["p_p"]), float(cfg["p_conc"]), rng)
@@ -192,6 +206,7 @@ def rocket_rates(cfg: Dict[str, Any], f_total: float, rng: random.Random) -> Tup
     return p_f, p_p, a_rocket
 
 
+# 计算线性插值分位数
 def percentile(values: List[float], q: float) -> float:
     if not values:
         return float("nan")
@@ -207,6 +222,7 @@ def percentile(values: List[float], q: float) -> float:
     return values[lower] * (1.0 - weight) + values[upper] * weight
 
 
+# 主模拟流程：根据扰动计算电梯/火箭工期并取最大值
 def simulate(
     config: Dict[str, Any],
     trials: int,
@@ -214,6 +230,7 @@ def simulate(
     m_se: float,
     no_fault: bool,
 ) -> List[TrialResult]:
+    # 固定随机种子便于复现
     rng = random.Random(seed)
     base = config["base"]
     uncertainty = config["uncertainty"]
@@ -225,22 +242,27 @@ def simulate(
     c_maint = float(base["C_maint"])
     c_fixed = float(base["C_TV_fixed"])
     c_elec_unit = compute_elec_unit(config)
+    # 目标质量中分配给火箭的部分
     m_rocket_target = max(m_goal - m_se, 0.0)
 
     results: List[TrialResult] = []
+    # 逐次蒙特卡洛采样
     for _ in range(trials):
         if no_fault:
+            # 无故障模式：直接关闭摆动/损坏/可用度折减
             f_osc = 1.0
             f_dmg = 1.0
             damage_cost = 0.0
             repair_years = 0.0
             a_mech = 1.0
         else:
+            # 摆动与损坏折减
             f_osc = oscillation_factor(uncertainty["oscillation"], rng)
             f_dmg, damage_cost, repair_years = elevator_damage_factor(
                 uncertainty["elevator"],
                 rng,
             )
+            # 机械可用度折减
             a_mech = mech_availability(uncertainty["elevator"], rng)
         cap_se_eff = cap_se * a_mech * f_osc * f_dmg
         if cap_se_eff <= 0.0 and m_se > 0:
@@ -248,14 +270,17 @@ def simulate(
         else:
             t_se = 0.0 if m_se <= 0 else (m_se / cap_se_eff)
         if math.isfinite(t_se):
+            # 若发生严重损坏，额外加修复时间
             t_se += repair_years
 
         if no_fault:
+            # 无故障模式下火箭不降载、不停飞
             p_f = 0.0
             p_p = 0.0
             a_rocket = 1.0
             m_eff = cap_rock
         else:
+            # 故障导致有效载荷下降 + 停飞导致节奏下降
             p_f, p_p, a_rocket = rocket_rates(uncertainty["rocket"], f_total, rng)
             alpha = float(uncertainty["rocket"]["alpha"])
             m_eff = cap_rock * (1.0 - p_f - alpha * p_p)
@@ -267,11 +292,14 @@ def simulate(
         if no_fault:
             cost_mishap = 0.0
         else:
+            # 故障事件次数用泊松分布抽样
             p_mishap = p_f + p_p
             mishap_count = sample_poisson(n_rock * p_mishap, rng)
             cost_mishap = mishap_count * float(uncertainty["rocket"]["C_mishap"])
 
+        # 总工期取两条链路的最大值
         t_total = max(t_se, t_rocket)
+        # 成本包含运行费 + 维护费 + 固定费 + 故障/损坏代价
         cost = m_se * c_elec_unit + n_rock * c_launch + t_total * c_maint + c_fixed
         cost += damage_cost + cost_mishap
         results.append(
@@ -289,6 +317,7 @@ def simulate(
     return results
 
 
+# 汇总统计：均值与分位数
 def summarize(results: List[TrialResult]) -> Dict[str, Any]:
     t_vals = [r.T for r in results if math.isfinite(r.T)]
     c_vals = [r.cost for r in results if math.isfinite(r.cost)]
@@ -310,6 +339,7 @@ def summarize(results: List[TrialResult]) -> Dict[str, Any]:
     return summary
 
 
+# 写出逐次样本 CSV
 def write_trials_csv(results: List[TrialResult], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="", encoding="utf-8") as handle:
@@ -341,6 +371,7 @@ def write_trials_csv(results: List[TrialResult], path: Path) -> None:
             )
 
 
+# 命令行参数解析
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=Path, default=None)
@@ -354,8 +385,10 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+# 主入口
 def main() -> None:
     args = parse_args()
+    # 仅输出默认配置时直接返回
     if args.dump_config:
         print(json.dumps(DEFAULT_CONFIG, indent=2))
         return
@@ -363,15 +396,18 @@ def main() -> None:
     config = load_config(args.config)
     base = config["base"]
     m_goal = float(base["M_goal"])
+    # 电梯质量优先使用 --m-se
     if args.m_se is None:
         m_se = m_goal * float(args.se_share)
     else:
         m_se = float(args.m_se)
 
+    # 执行模拟并输出统计
     results = simulate(config, args.trials, args.seed, m_se, args.no_fault)
     summary = summarize(results)
     print(json.dumps(summary, indent=2))
 
+    # 可选输出逐次样本 CSV
     if args.output:
         write_trials_csv(results, args.output)
 
