@@ -13,6 +13,10 @@
 ## 计算
 - 采用报告推荐基线：**P = 4 MW**，**t = 7 天 = 168 h**
 - 电能：**E = P × t = 4 MW × 168 h = 672 MWh**
+> **按 ISEC 报告常用的“约 20 吨级爬升器”示例**（总电能约 **672 MWh**）粗略折算：  
+> **每吨电能消耗 ≈ 672 MWh / 20 t = 33.6 MWh/吨 = 33,600 kWh/吨**（约 **33.6 kWh/kg**）。  
+> 注：这只是把“到 GEO 的可量化电能”按总质量平均摊分；GEO→10 万公里段报告仅写 *Solar – Minimum*，未给出明确数值。
+
 
 ## 引用来源（PDF）
 - https://www.isec.org/s/2013StudyReport_DesignConsiderationsClimbers.pdf
