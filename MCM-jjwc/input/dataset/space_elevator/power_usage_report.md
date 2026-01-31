@@ -32,6 +32,15 @@
 | 多级多段总成本估算 | $22.6 billion | 汇总后的总成本 | `数据集/多级多段电梯研究_缆绳长度、材料选型与基本工程约束.pdf` p70 |
 | 激光爬升挑战奖金 | $900,000 | 2009年LaserMotive获奖金额 | `数据集/多级多段电梯研究_缆绳长度、材料选型与基本工程约束.pdf` p75 |
 
+## 联合国世界电价均价（检索结果）
+
+经UNdata检索未找到“世界电价均价（$/kWh）”的官方汇总数据：
+
+- UNdata检索“electricity price kwh”无结果，未出现电价或电费单位数据。来源：https://data.un.org/Search.aspx?q=electricity%20price%20kwh
+- UNdata检索“electricity price”返回的是国民账户行业“按现价”增加值条目，并非电力单价或电费均价。来源：https://data.un.org/Search.aspx?q=electricity%20price&ds=1
+
+因此，报告暂不写入“联合国世界电价均价”数值。如需电费估算，请指定可接受的电价来源或提供单价假设（$/kWh）。
+
 ## 备注
 
 - 数据集PDF未提供电价或电费（$/kWh），因此无法直接给出用电成本的美元金额；如需电费估算，请提供电价假设。
