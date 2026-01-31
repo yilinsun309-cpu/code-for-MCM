@@ -27,7 +27,8 @@
     * 推荐模型：
       $$Cost(t) = C_{2026} \times e^{-k(t-2026)}$$
       *(建议 $k$ 取值 0.05 - 0.10)*
-
+模型出处
+Wright, T. P. (1936). Factors Affecting the Cost of Airplanes. Journal of the Aeronautical Sciences, 3, 122–128. https://doi.org/10.2514/8.155
 ---
 
 ## 2. 最大发射频率与基础设施瓶颈 (Launch Cadence & Constraints)
