@@ -1,0 +1,192 @@
+# 第二问：非完美运行（摆动 / 火箭故障 / 电梯损坏）——核心公式 & 关键参数
+
+> 目标：把“非完美运行”转成 **有效运力** 与 **额外成本/工期** 的参数化项，便于敏感性分析或蒙特卡洛。
+
+---
+
+## 0) 通用：有效运力（Effective Throughput）与工期
+
+### 0.1 可用度（Availability）
+- 定义：  
+  \[
+  A=\frac{MTBF}{MTBF+MTTR}
+  \]
+- 有效运力：  
+  \[
+  Q_{\text{eff}}=Q_0\cdot A \cdot \mathbb{E}[f(\text{state})]
+  \]
+  - \(Q_0\)：名义年运力（t/year）
+  - \(f(\text{state})\in[0,1]\)：运行状态折减因子（摆动、故障、停机等）
+
+### 0.2 工期（连续运输近似）
+\[
+T\approx \frac{M_{\text{total}}}{Q_{\text{eff}}}
+\]
+- \(M_{\text{total}}\)：需要运送的总质量（t）
+
+---
+
+## 1) 缆索摆动（tether oscillation / libration）
+
+### 1.1 “摆动 → 运力折减”分段规则（建议直接用）
+\[
+f_{\text{osc}}(\theta)=
+\begin{cases}
+1, & |\theta|\le \theta_1\\
+r, & \theta_1<|\theta|\le \theta_2\\
+0, & |\theta|>\theta_2
+\end{cases}
+\]
+- \(\theta\)：缆索/配重端“libration angle”（deg）
+- \(\theta_1,\theta_2\)：你设定的“限速阈值/停运阈值”
+- \(r\in(0,1)\)：限速比例（例如 0.5～0.8）
+
+> 运营层面最终只需要：\(\mathbb{E}[f_{\text{osc}}]\)（长期平均折减）。
+
+### 1.2 可直接作为“敏感性分析初值”的关键量级（来自仿真论文）
+- **残余净摆动幅度范围（200 km/hr 全程上行+制动时机不同）：**  
+  \[
+  |\theta| \approx 0.3^\circ \sim 0.65^\circ
+  \]
+- **典型净摆动（某一制动情景）：**  
+  \[
+  |\theta| \approx 0.55^\circ
+  \]
+- **局部纵向振动（制动后放大观察）：**  
+  \[
+  P_{\text{osc}}\approx 6\text{ hours}
+  \]
+- **面内（east-west）libration 周期量级：**  
+  \[
+  P_{\text{in-plane}}\approx 5\text{ days}
+  \]
+
+### 1.3 数据要落地：风场 → 超阈值概率
+- 用风场数据得到：  
+  \[
+  p_1=\Pr(|\theta|>\theta_1),\quad p_2=\Pr(|\theta|>\theta_2)
+  \]
+- 于是：  
+  \[
+  \mathbb{E}[f_{\text{osc}}]\approx (1-p_1)\cdot 1 + (p_1-p_2)\cdot r + p_2\cdot 0
+  \]
+- 风数据推荐字段（直接能算分布/季节性）：
+  - 10 m wind speed \(W\)（月均/长期序列）
+  - gust 统计（峰值阵风定义用于“极端停运”）
+
+---
+
+## 2) 火箭故障（rocket failure / mishap）
+
+### 2.1 失败概率（按“每次发射”口径）
+- 先拆两类：
+  - \(p_f\)：完全失败（0 吨到月球）
+  - \(p_p\)：部分失败（只损失一部分或产生额外补发/延误）
+- 总体事故口径：
+  \[
+  p_{\text{mishap}} = p_f + p_p
+  \]
+- 可作为“保守基线”的统计值（2000–2023/01）：  
+  \[
+  p_{\text{mishap}}\approx \frac{50}{433}\approx 0.115\ (\approx 12\%)
+  \]
+
+> 到 2050 可引入“技术成熟折减系数” \(s\in(0,1)\)：  
+\[
+p_{\text{mishap,2050}} = s\cdot p_{\text{mishap}}
+\]
+
+### 2.2 有效运送质量（把失败折算成“期望到货”）
+- 单次名义有效载荷：\(m\)（t/launch）
+- 部分失败“损失比例”：\(\alpha\in(0,1)\)（例如 0.3 表示损失 30%）
+\[
+m_{\text{eff}} = m\cdot\Big(1-p_f-\alpha p_p\Big)
+\]
+- 需要的发射次数：
+\[
+N \approx \left\lceil \frac{M_{\text{total}}}{m_{\text{eff}}}\right\rceil
+\]
+
+### 2.3 故障导致的“节奏下降/停飞”简化（把调查停飞并入可用度）
+- 名义发射节奏：\(c_0\)（launches/year）
+- 故障事件率（年）：
+\[
+\lambda \approx c_0\cdot p_{\text{mishap}}
+\]
+- 单次故障导致的平均停飞/恢复时间：\(D\)（years）
+- 近似可用度：
+\[
+A_{\text{rocket}} \approx \frac{1}{1+\lambda D}
+\]
+- 有效节奏：
+\[
+c_{\text{eff}}=c_0\cdot A_{\text{rocket}}
+\]
+- 工期（离散发射近似）：
+\[
+T\approx \frac{N}{c_{\text{eff}}}
+\]
+
+---
+
+## 3) 电梯损坏（elevator damage：climber故障 + MMOD 撞击）
+
+### 3.1 机械故障（climber / 电梯子系统）
+- 直接用可用度：
+\[
+A_{\text{mech}}=\frac{MTBF}{MTBF+MTTR}
+\]
+- 若“单机故障不影响全局”，则把 \(Q_0\) 乘以“可并行台数比例”；  
+  若“会阻塞缆带/需要全线停运”，则 \(A_{\text{mech}}\) 直接作用在系统运力上。
+
+### 3.2 轨道碎片/微流星（MMOD）撞击：泊松过程建模（最通用）
+- 将撞击视为泊松过程：年撞击次数 \(N\sim \text{Poisson}(\mu)\)
+- 关键：用环境模型输出的 **通量 flux** 计算 \(\mu\)。
+
+**(1) 期望撞击次数**
+\[
+\mu = \int F(d,h)\cdot A_{\text{proj}}(h)\,dh
+\]
+- \(F(d,h)\)：粒径 \(d\)、高度 \(h\) 条件下的通量（#/m^2/year）
+  - 轨道碎片：用 ORDEM 输出
+  - 微流星：用 MEM 输出
+- \(A_{\text{proj}}(h)\)：缆带在该高度段的“投影面积”（m^2）
+  - 简化：\(A_{\text{proj}}(h)\approx w(h)\cdot \Delta h\)（把缆带当宽度为 \(w\) 的带状体）
+
+**(2) 年内至少一次撞击**
+\[
+p(\ge 1)=1-e^{-\mu}
+\]
+
+**(3) “切断/严重损伤”概率（只统计 d > d_crit 的粒子）**
+\[
+\mu_{\text{cut}}=\int F(d>d_{\text{crit}},h)\cdot A_{\text{proj}}(h)\,dh
+\]
+\[
+p_{\text{cut}}=1-e^{-\mu_{\text{cut}}}
+\]
+
+### 3.3 “撞击/损坏 → 运力折减”规则（建议直接用分段）
+\[
+f_{\text{dmg}}=
+\begin{cases}
+1, & \text{无损伤}\\
+\beta, & \text{轻微损伤（限载/限速）}\\
+0, & \text{严重损伤（停运维修）}
+\end{cases}
+\]
+- \(\beta\in(0,1)\)：轻微损伤限载比例（例如 0.5～0.9）
+
+### 3.4 经验量级提醒（用于 sanity check）
+- 旧 NASA tether 报告给出：轨道碎片可能对“地基 space elevator”造成 **“年内超过一次”** 的撞击量级风险提示（用于你设置 \(\mu\) 的量级检验）。
+
+---
+
+## References（出处）
+1. Lang, D. D. “Space Elevator Dynamic Response to In-Transit Climbers” (GTOSS simulation). PDF: https://spaceelevatorwiki.com/wiki/images/2/2b/Paper_Lang_Climber_Transit.pdf
+2. GAO Highlights (Dec 2023): “50 mishaps… about 12% of 433 launches” (FAA data). PDF: https://www.gao.gov/assets/gao-24-105561-highlights.pdf
+3. NASA NTRS (19870001511): tether applications / debris impact risk (“impact… over once per year” keypoints). PDF: https://ntrs.nasa.gov/api/citations/19870001511/downloads/19870001511.pdf
+4. NASA ORDEM 3.1 Model Process Document (TP-20220004345). PDF: https://ntrs.nasa.gov/api/citations/20220004345/downloads/TP-20220004345_ORDEM31_Process_Doc_final_20220314.pdf
+5. NASA MEM 3 User Guide (web): https://fireballs.ndc.nasa.gov/mem/guide/
+6. PO.DAAC CCMP V3.1 monthly 10m winds dataset: https://podaac.jpl.nasa.gov/dataset/CCMP_WINDS_10MMONTHLY_L4_V3.1
+7. NOAA NDBC climatic description (gust definition etc.): https://www.ndbc.noaa.gov/climatedesc.shtml
