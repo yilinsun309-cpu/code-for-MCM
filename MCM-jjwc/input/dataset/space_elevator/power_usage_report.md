@@ -16,3 +16,10 @@
 
 ## 引用来源（PDF）
 - https://www.isec.org/s/2013StudyReport_DesignConsiderationsClimbers.pdf
+
+
+## 世界电价均价（检索结果）
+
+出处：https://zh.globalpetrolprices.com/electricity_prices/
+
+平均電價為每千瓦時0.213美元
