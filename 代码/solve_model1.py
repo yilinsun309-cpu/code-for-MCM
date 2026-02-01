@@ -207,12 +207,20 @@ def scenario_c(
     alpha_grid: np.ndarray,
     export_all: bool,
     max_export: int,
+    n_low_override: Optional[int] = None,
+    n_high_override: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Enumerate and solve Scenario C (Hybrid) with Pareto analysis."""
     N_low = int(math.ceil(params.Cap_SE / (params.f_cycle * params.Cap_Rock)))
     N_high = int(math.ceil(params.M_goal / params.Cap_Rock))
+    if n_low_override is not None:
+        N_low = int(n_low_override)
+    if n_high_override is not None:
+        N_high = int(n_high_override)
     if N_low < 0:
         N_low = 0
+    if N_high < 0:
+        N_high = 0
     if N_low > N_high:
         N_low = N_high
 
@@ -436,6 +444,8 @@ def main() -> None:
     parser.add_argument("--no-plot", action="store_true", help="Disable pareto plot")
     parser.add_argument("--alpha-steps", type=int, default=21, help="Number of alpha steps")
     parser.add_argument("--export-all", action="store_true", help="Export all feasible points")
+    parser.add_argument("--n-low", type=int, default=None, help="Override Scenario C N lower bound")
+    parser.add_argument("--n-high", type=int, default=None, help="Override Scenario C N upper bound")
     args = parser.parse_args()
 
     params = Params()
@@ -462,7 +472,14 @@ def main() -> None:
     res_b = scenario_b(params)
 
     # Scenario C
-    res_c = scenario_c(params, alpha_grid, args.export_all, max_export=200000)
+    res_c = scenario_c(
+        params,
+        alpha_grid,
+        args.export_all,
+        max_export=200000,
+        n_low_override=args.n_low,
+        n_high_override=args.n_high,
+    )
 
     # Export CSVs
     header_common = [
