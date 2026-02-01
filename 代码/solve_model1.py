@@ -360,50 +360,73 @@ def plot_pareto(
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    T_all = all_data[:, 1]
-    C_all = all_data[:, 2]
     T_p = pareto_data[:, 1]
     C_p = pareto_data[:, 2]
 
-    plt.figure(figsize=(8, 6))
-    plt.scatter(T_all, C_all, s=10, alpha=0.2, label="feasible")
-    plt.scatter(T_p, C_p, s=18, alpha=0.8, label="pareto points")
+    fig, ax = plt.subplots(figsize=(8, 6))
+    fig.patch.set_facecolor("#24324a")
+    ax.set_facecolor("#24324a")
+    text_color = "#e6f2ff"
+    grid_color = "#6f8099"
+    line_color = "#8bc34a"
+    marker_edge = "#cfe8a9"
 
     if T_p.size > 1:
         order = np.argsort(T_p)
-        plt.plot(T_p[order], C_p[order], linewidth=1.6, label="pareto front")
+        ax.plot(T_p[order], C_p[order], color=line_color, linewidth=2.2)
+    else:
+        ax.scatter(T_p, C_p, s=30, color=line_color)
 
-    # Recommended point
-    plt.scatter(recommended["T"], recommended["C_total"], s=60, marker="*", label="recommended")
-    plt.annotate(
-        "recommended",
-        (recommended["T"], recommended["C_total"]),
-        textcoords="offset points",
-        xytext=(6, 6),
-    )
-
-    # Alpha extremes: alpha=0 and alpha=1
     if ws_data.shape[0] > 0:
-        alpha_vals = ws_data[:, 0]
-        idx_alpha0 = int(np.argmin(np.abs(alpha_vals - 0.0)))
-        idx_alpha1 = int(np.argmin(np.abs(alpha_vals - 1.0)))
-        for idx, label in [(idx_alpha0, "alpha=0"), (idx_alpha1, "alpha=1")]:
-            plt.scatter(ws_data[idx, 2], ws_data[idx, 3], s=45, marker="D", label=label)
-            plt.annotate(
-                label,
-                (ws_data[idx, 2], ws_data[idx, 3]),
+        ws_sorted = ws_data[np.argsort(ws_data[:, 2])]
+        ax.plot(
+            ws_sorted[:, 2],
+            ws_sorted[:, 3],
+            color=line_color,
+            linewidth=1.6,
+            alpha=0.8,
+        )
+        ax.scatter(
+            ws_sorted[:, 2],
+            ws_sorted[:, 3],
+            s=38,
+            color=line_color,
+            edgecolors=marker_edge,
+            linewidths=0.6,
+        )
+
+        label_count = min(7, ws_sorted.shape[0])
+        label_idx = np.unique(np.linspace(0, ws_sorted.shape[0] - 1, label_count).astype(int))
+        for idx in label_idx:
+            alpha_val = ws_sorted[idx, 0]
+            ax.annotate(
+                f"alpha={alpha_val:.2g}",
+                (ws_sorted[idx, 2], ws_sorted[idx, 3]),
                 textcoords="offset points",
-                xytext=(6, -8),
+                xytext=(6, 4),
+                color=text_color,
+                fontsize=9,
             )
 
-    plt.xlabel("T (years)")
-    plt.ylabel("C (USD)")
-    plt.title("Scenario C Pareto Frontier")
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(path, dpi=150)
-    plt.close()
+    ax.scatter(
+        recommended["T"],
+        recommended["C_total"],
+        s=70,
+        marker="*",
+        color="#ffd166",
+    )
+
+    ax.set_xlabel("T (years)", color=text_color)
+    ax.set_ylabel("C (USD)", color=text_color)
+    ax.set_title("Scenario C Pareto Frontier", color=text_color)
+    ax.grid(True, color=grid_color, alpha=0.35)
+    ax.tick_params(colors=text_color)
+    for spine in ax.spines.values():
+        spine.set_color(grid_color)
+
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
 
 
 def main() -> None:
