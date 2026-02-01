@@ -199,7 +199,7 @@ sim = Simulator(
     lambda_up=1/2.0,         # mean repair 2 days -> rate 0.5/day
     I_safe=70,
     delta=2.0,               # 2 days latency (symbolic)
-    M_goal=1e6,              # ton (example)
+    M_goal=1e8,              # ton (example)
     seed=1
 )
 
