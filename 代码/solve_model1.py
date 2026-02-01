@@ -417,9 +417,10 @@ def plot_pareto(
     )
 
     ax.set_xlabel("T (years)", color=text_color)
-    ax.set_ylabel("C (USD)", color=text_color)
+    ax.set_ylabel("C (USD, log scale)", color=text_color)
     ax.set_title("Scenario C Pareto Frontier", color=text_color)
-    ax.grid(True, color=grid_color, alpha=0.35)
+    ax.set_yscale("log")
+    ax.grid(True, color=grid_color, alpha=0.35, which="both")
     ax.tick_params(colors=text_color)
     for spine in ax.spines.values():
         spine.set_color(grid_color)
