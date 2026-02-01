@@ -367,7 +367,11 @@ def plot_pareto(
 
     plt.figure(figsize=(8, 6))
     plt.scatter(T_all, C_all, s=10, alpha=0.2, label="feasible")
-    plt.scatter(T_p, C_p, s=18, alpha=0.8, label="pareto")
+    plt.scatter(T_p, C_p, s=18, alpha=0.8, label="pareto points")
+
+    if T_p.size > 1:
+        order = np.argsort(T_p)
+        plt.plot(T_p[order], C_p[order], linewidth=1.6, label="pareto front")
 
     # Recommended point
     plt.scatter(recommended["T"], recommended["C_total"], s=60, marker="*", label="recommended")
