@@ -205,6 +205,29 @@ Values below one day indicate multiple launches per day on average.
 This table reflects an upper-bound scenario assuming unconstrained high growth.
 \end{table}
 
+\subsubsection{Launch-site parameters and per-site cadence accounting}
+\label{sec:launch_site_params}
+
+To avoid over-aggregating launch capacity, we define site-specific parameters and compute cadence separately before summing:
+\begin{itemize}
+    \item $\mathcal{S}$: set of launch sites (rows in Table~\ref{tab:launch_forecast_interval_2050}).
+    \item $\lambda_s^{\text{max}}$ (launches/yr): forecasted maximal cadence of site $s$ (e.g., 2300 for Florida).
+    \item $\Delta t_s$ (days): average interval at site $s$, $\Delta t_s = 365/\lambda_s^{\text{max}}$ (already shown in the table).
+    \item $N_s$: number of launches assigned to site $s$ in the planning horizon $T$ (years).
+    \item $c_s$: effective annual cadence used in the model, $c_s = N_s/T$, with constraint $c_s \le \lambda_s^{\text{max}}$.
+    \item $f_{\text{total}}$: system-wide annual cadence, obtained by summation not replacement: $f_{\text{total}} = \sum_{s\in\mathcal{S}} c_s \le \sum_{s\in\mathcal{S}} \lambda_s^{\text{max}}$.
+\end{itemize}
+
+When computing launch frequency–limited completion time in Task~1/2/3, replace the single-capacity constraint
+\[
+N_{Rock} \le f_{\text{total}}\cdot T
+\]
+with its site-resolved form
+\[
+N_{Rock} = \sum_{s\in\mathcal{S}} N_s,\qquad N_s \le \lambda_s^{\text{max}}\,T,\ \forall s\in\mathcal{S},
+\]
+so that bottlenecks at individual sites are explicitly respected and sensitivity to site outages or growth can be tested.
+
 
 
 To model the long-term reduction in launch cost, an experience-curve-based exponential decay model is adopted. In the aerospace industry, a well-established empirical rule suggests that unit cost decreases by approximately 15--20\% with each doubling of cumulative production. This learning effect is captured by the following formulation:
