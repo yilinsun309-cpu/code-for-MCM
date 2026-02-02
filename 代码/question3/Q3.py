@@ -448,8 +448,6 @@ class Task3Simulator:
         return segments
 
     def consume_until(self, new_t: float) -> float:
-        if self.stockout:
-            return self.t
         d0 = self.t * DAYS_PER_YEAR
         d1 = new_t * DAYS_PER_YEAR
         if d1 <= d0:
@@ -468,11 +466,12 @@ class Task3Simulator:
             else:
                 time_to_zero = current_W / c_day if c_day > 0 else INF
                 t_hit_day = seg_start + time_to_zero
-                self.stockout = True
-                self.stockout_time = t_hit_day / DAYS_PER_YEAR
+                if not self.stockout:
+                    self.stockout = True
+                    self.stockout_time = t_hit_day / DAYS_PER_YEAR
                 self.W = 0.0
                 self.min_W = 0.0
-                return self.stockout_time
+                current_W = 0.0
         self.W = current_W
         if self.W < self.min_W:
             self.min_W = self.W
@@ -644,8 +643,6 @@ class Task3Simulator:
             if ev.time > t_end:
                 break
             self.fluid_update(ev.time)
-            if self.stockout:
-                break
             event_count += 1
 
             if ev.etype == "inventory":
