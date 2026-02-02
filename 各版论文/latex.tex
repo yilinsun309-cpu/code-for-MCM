@@ -1619,6 +1619,39 @@ To capture local ecological bottlenecks, global externalities, and failure-induc
     \item \textbf{Systemic risk}: environmental sunk cost from failures, coupled to Task~2 failure/replacement logic.
 \end{itemize}
 
+\subsection{Baseline environmental parameters for Task 4 (ready-to-use)}
+\label{sec:task4_params}
+\begin{table}[htbp]
+\centering
+\caption{Default environmental inputs (from \texttt{pollution.md})}
+\label{tab:task4_params}
+\renewcommand{\arraystretch}{1.08}
+\begin{tabular}{ll}
+\toprule
+\textbf{Rocket (Falcon Heavy class)} & \textbf{Value / note} \\
+\midrule
+Propellant per launch & RP-1: $395.5$ t;\quad LOX: $937.1$ t\\
+CO$_2$ factor (RP-1) & $3.153$ kg CO$_2$/kg fuel (IPCC 2006)\\
+CO$_2$ per launch & $\approx 1{,}161$ t CO$_2$/launch (FAA EA)\\
+CO$_2$e per launch & $\approx 2{,}675$ t CO$_2$e/launch (FAA EA)\\
+BC emission index & $10$--$20$ g/kg fuel $\Rightarrow$ $4.0$--$7.9$ t BC/launch\\
+NOx emission index & $14$ g/kg fuel $\Rightarrow$ $5.5$ t NOx/launch\\
+Noise red line & DNL $\le 65$ dB; FH about $4$--$10$ dB above F9 \\
+\midrule
+\textbf{Space elevator (per kg to GEO)} & \textbf{Value / note} \\
+\midrule
+Lift energy & $14.8$ kWh/kg (NASA/CP-2000-210429)\\
+Grid CO$_2$ intensity (IEA NZE) & 2020: $0.468$; 2030: $0.138$; 2050: $0.005$ kg CO$_2$/kWh\\
+Derived CO$_2$ (per kg) & 2020: $6.93$; 2030: $2.04$; 2050: $0.074$ kg CO$_2$/kg payload\\
+\midrule
+\textbf{Materials GWP (construction placeholder)} & \textbf{Value / note} \\
+\midrule
+Graphene (Hummers / waste route) & $4{,}841$ / $115.86$ kg CO$_2$e per kg \\
+Carbon fiber (baseline / improved) & $24.83$ / $19.29$ kg CO$_2$e per kg \\
+\bottomrule
+\end{tabular}
+\end{table}
+
 \subsection{Bottleneck metric: ecological launch caps}
 For each launch site $j\in\mathcal{S}$ and year $y$ impose
 \begin{equation}
