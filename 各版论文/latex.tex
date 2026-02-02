@@ -148,7 +148,7 @@ $L(t)$ & Program/state of a rocket at time $t$ & - & Simulated \\
 $I(t)$ & Number of active rockets at time $t$ & rockets & Simulated \\
 $I_{\text{safe}}$ & Safety threshold for active fleet size & rockets & From Task 1 \\
 $R(t)$ & Replacement (relaunch) decision at time $t$ & rockets & Policy \\
-$\delta$ & Replacement latency (delay before replacement becomes available, days; divide by 365 when used with year-based $t$) & day & TBD \\
+$\delta$ & Replacement latency (delay before replacement becomes available, days; divide by 365 when used with year-based $t$) & day & $14$ (assumed) \\
 $\Delta \tau$ & Time buffer added to absorb disruptions & day & Tuned \\
 $\eta_{\text{pack}}$ & Packing efficiency for water (net water per nominal payload) & - & $0.8\sim 1.0$ \\
 $\kappa_{\text{svc}}$ & Water handling service-time multiplier & - & $1.0\sim 1.5$ \\
@@ -797,9 +797,9 @@ $\lambda_{\text{hit,untracked}}$ & $0.1/\text{day}$ &
 Untracked small debris hit rate $\approx$ once per 10 days \cite{isec_debris_2010} \\
 $\lambda_{\text{hit,tracked}}$ & $0.01/\text{day}$ &
 Tracked debris hit rate (no avoidance) $\approx$ once per 100 days \cite{isec_debris_2010} \\
-$p_{\text{down}|\text{hit}}$ & TBD (e.g., $0.1\sim 0.5$) &
+$p_{\text{down}|\text{hit}}$ & $0.2$ (mid of $0.1\sim0.5$) &
 Conditional probability that a hit causes operational downtime \\
-$p_{\text{cat}|\text{hit}}$ & TBD (e.g., $10^{-4}\sim 10^{-2}$) &
+$p_{\text{cat}|\text{hit}}$ & $10^{-4}$ (small-object placeholder) &
 Conditional probability that a hit causes catastrophic failure \\
 \bottomrule
 \end{tabular}
@@ -810,12 +810,11 @@ Using Table~\ref{tab:failure_prob_task2}, we recommend the following baseline su
 \begin{align}
 p_{26} &= p_{\text{launch}},\\
 p_{16} &= 1-(1-p_{\text{launch}})(1-p_{\text{dock,auto}}),\\
-p_{46} &= 1-(1-p_{\text{return,moon}\rightarrow \text{apex}})(1-p_{\text{dock,auto}}),\\
-p_{56} &= p_{\text{return,earth}},\\
+p_{46} &= p_{\text{dock,auto}} \quad(\text{from segment-4 ARD failure}),\\
+p_{56} &= 3.60\times 10^{-4}\quad(\text{lunar return entry LOC, ESAS}),\\
 p_{36} &= p_{\text{land}}.
 \end{align}
-All return-leg risks $p_{\text{return,moon}\rightarrow \text{apex}}$ and $p_{\text{return,earth}}$
-remain scenario inputs and are explored via sensitivity analysis.
+These instantiate the previously TBD return-leg probabilities with values from the segmented rocket failure dataset; alternative scenarios can still adjust them in sensitivity analysis.
 
 \paragraph{Effective elevator availability.}
 If a downtime-event triggers a repair time $T_{\text{repair}}$ (days), then over a long horizon
