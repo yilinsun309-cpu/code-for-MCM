@@ -260,7 +260,9 @@ def phi_for_scenario(scenario: int) -> Dict[int, int]:
 
 
 def start_state_for_scenario(scenario: int) -> int:
-    return 1 if scenario == 1 else 2
+    # Operational year: fleet already deployed.
+    # Scenario 1/3 use Apex cycling (state 4 -> 3 -> 4), Scenario 2 starts at ground launch (state 2).
+    return 4 if scenario in (1, 3) else 2
 
 
 def requires_inventory(scenario: int, from_state: int, to_state: int) -> bool:
@@ -372,10 +374,15 @@ class Task3Simulator:
         if deficit > self.max_deficit:
             self.max_deficit = deficit
 
-    def add_rocket(self, init_state: int) -> None:
+    def add_rocket(self, init_state: int, loaded_from_elevator: Optional[bool] = None) -> None:
         rid = self.next_rid
         self.next_rid += 1
-        self.rocks[rid] = Rocket(rid=rid, state=init_state, payload=self.q_water)
+        self.rocks[rid] = Rocket(
+            rid=rid,
+            state=init_state,
+            payload=self.q_water,
+            loaded_from_elevator=loaded_from_elevator,
+        )
         self.schedule_event(self.t + self.tau_robust[init_state], "rocket", rid=rid)
 
     def schedule_program3(self, rid: int, start_time: float) -> None:
@@ -548,9 +555,6 @@ class Task3Simulator:
             return
         state = r.state
 
-        if state == 3:
-            self.record_arrival(rid, r.loaded_from_elevator)
-
         pf = self.params.p_fail.get(state, 0.0)
         if self.rng.random() < pf:
             r.state = 6
@@ -559,11 +563,23 @@ class Task3Simulator:
             self.update_deficit()
             return
 
+        if state == 3:
+            self.record_arrival(rid, r.loaded_from_elevator)
+
         next_state = self.phi.get(state)
         if next_state is None:
             return
 
         r.state = next_state
+        if next_state == 2:
+            # Ground launch constrained by f_total cadence (Scenario 2)
+            t_start = max(self.t, self.next_launch_slot)
+            wait = t_start - self.t
+            if wait * DAYS_PER_YEAR > self.max_launch_wait:
+                self.max_launch_wait = wait * DAYS_PER_YEAR
+            self.next_launch_slot = t_start + 1.0 / self.params.f_total
+            self.schedule_event(t_start + self.tau_robust[2], "rocket", rid=rid)
+            return
         if next_state == 3 and requires_inventory(self.params.scenario, state, next_state):
             r.loaded_from_elevator = True
             if self.cap_eff <= 0:
@@ -593,8 +609,10 @@ class Task3Simulator:
         if init_count is None:
             init_count = self.params.I_safe
 
+        init_state = self.start_state
         for _ in range(int(init_count)):
-            self.add_rocket(self.start_state)
+            init_loaded = True if init_state == 4 and self.params.scenario in (1, 3) else None
+            self.add_rocket(init_state, loaded_from_elevator=init_loaded)
 
         if verbose:
             print(
