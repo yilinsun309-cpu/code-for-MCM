@@ -360,8 +360,8 @@ def main() -> None:
         config.site_caps,
         config.alpha_climate,
         launches_per_year,
-        config.launch_plan,
         n_launch_total,
+        config.launch_plan,
         f_green=config.f_green,
     )
 

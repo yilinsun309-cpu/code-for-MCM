@@ -1,0 +1,22 @@
+{
+  "scenarios": {
+    "A": {
+      "E_impact": {
+        "mean": 7400000.0,
+        "note": "Task4 scenario A, total_co2e_ton with grid_intensity=0.005, cap_se=179000 t/yr, towers=1"
+      }
+    },
+    "B": {
+      "E_impact": {
+        "mean": 2140000000.0,
+        "note": "Task4 scenario B, total_co2e_ton for 800000 launches of 125 t each"
+      }
+    },
+    "C": {
+      "E_impact": {
+        "mean": 33957400.0,
+        "note": "Task4 scenario C using DES inputs n_launch=9928, delivered=1e8 t, elevator_mass=1e8 t"
+      }
+    }
+  }
+}
