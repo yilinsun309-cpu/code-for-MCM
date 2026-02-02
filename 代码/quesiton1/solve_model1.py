@@ -37,7 +37,7 @@ class Params:
     C_launch_mode: str = "constant"  # constant | avg15m | decay
     C_launch_C0: float = 1.5e8  # USD/launch at t0, for decay
     C_launch_k: float = 0.096  # 1/yr, for decay
-    C_elec_unit: float = 4.15  # USD/ton
+    C_elec_unit: float = 7156.8  # USD/ton
     C_maint: float = 1.2e8  # USD/yr
     C_TV_fixed: float = 3.0e8  # USD
 
@@ -122,7 +122,7 @@ def scenario_a(params: Params) -> Dict[str, Any]:
     cost_launch = C_launch * N_rock
     cost_elec = params.C_elec_unit * M_se
     cost_maint = params.C_maint * T
-    cost_fixed = params.C_TV_fixed
+    cost_fixed = params.C_TV_fixed * T
     C_total = cost_launch + cost_elec + cost_maint + cost_fixed
 
     return {

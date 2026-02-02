@@ -5,11 +5,13 @@
     "Cap_Rock": 125.0,
     "f_total": 3834.0,
     "f_cycle": 60.0,
+    "tau23": 0.01643835616438356,
+    "tau_transit": 0.0,
     "C_launch": 150000000.0,
     "C_launch_mode": "constant",
     "C_launch_C0": 150000000.0,
     "C_launch_k": 0.096,
-    "C_elec_unit": 4.15,
+    "C_elec_unit": 7156.8,
     "C_maint": 120000000.0,
     "C_TV_fixed": 300000000.0
   },
@@ -18,10 +20,10 @@
     "N_Rock": 72,
     "M_SE": 100000000.0,
     "cost_launch": 10800000000.0,
-    "cost_elec": 415000000.00000006,
+    "cost_elec": 715680000000.0,
     "cost_maint": 22346368715.083797,
-    "cost_fixed": 300000000.0,
-    "C_total": 33861368715.083797
+    "cost_fixed": 55865921787.709496,
+    "C_total": 804692290502.7932
   },
   "scenario_b": {
     "T": 208.65936358894106,
@@ -31,16 +33,16 @@
     "C_total": 120025039123630.67
   },
   "scenario_c": {
-    "N_low": 72,
+    "N_low": 0,
     "N_high": 800000,
-    "feasible_count": 799929,
-    "pareto_count": 377198,
+    "feasible_count": 800000,
+    "pareto_count": 377166,
     "exported_count": 200000,
     "recommended": {
-      "N_Rock": 188670,
-      "T": 142.30214152700185,
-      "C_total": 28318193384420.74,
-      "M_SE": 76416250.0,
+      "N_Rock": 188655,
+      "T": 142.3056331471136,
+      "C_total": 28904927602921.79,
+      "M_SE": 76418125.0,
       "R": 537000.0,
       "method": "normalized_distance_to_ideal"
     }
