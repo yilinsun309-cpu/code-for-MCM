@@ -1,4 +1,4 @@
-\documentclass{mcmthesis}
+﻿\documentclass{mcmthesis}
 \mcmsetup{CTeX = false,   % 使用 CTeX 套装时，设置为 true
         tcn = 2609427, problem = B,
         sheet = true, titleinsheet = true, keywordsinsheet = true,
@@ -799,24 +799,24 @@ and the effective elevator supply rate becomes
 $Cap_{SE}^{\text{eff}}=A_{\text{SE}}\,Cap_{SE}$, which is then used in
 Section~\ref{sec:model2_inventory}.
 
-\subsubsection{非完美运行的核心公式与参数映射（可直接套用）}
+\subsubsection{Core formulas and parameter mapping for non-ideal operations (plug-and-play)}
 \label{sec:model2_nonideal_mapping}
 
-为便于在 Task~2 中快速把“故障/摆动/停机”折算到有效运力和工期，我们给出一组直接可用的公式与缺省参数：
+To quickly translate oscillation/failure/downtime into effective throughput and schedule in Task~2, we provide plug-and-play formulas and default parameters.
 
-\paragraph{有效运力与可用度耦合。}
-把停机/维修时间纳入可用度 $A$（任意设备或系统均可）
+\paragraph{Effective throughput via availability.}
+Include downtime/repair in availability $A$ (any subsystem):
 \begin{equation}
 A=\frac{MTBF}{MTBF+MTTR},\qquad
 Q_{\text{eff}}=Q_0\cdot A\cdot \mathbb{E}[f(\text{state})],
 \end{equation}
-其中 $f(\text{state})\in[0,1]$ 表示运行状态折减（摆动、损伤、限速等）；连续运输近似下的工期为
+where $f(\text{state})\in[0,1]$ captures state-dependent derating (oscillation, damage, speed limit, etc.). Under the continuous-transport approximation,
 \begin{equation}
 T\approx \frac{M_{\text{total}}}{Q_{\text{eff}}}.
 \end{equation}
 
-\paragraph{缆索摆动折减。}
-建议直接使用分段函数
+\paragraph{Tether oscillation derating.}
+Use the piecewise factor
 \begin{equation}
 f_{\text{osc}}(\theta)=
 \begin{cases}
@@ -825,15 +825,15 @@ r, & \theta_1<|\theta|\le \theta_2,\\
 0, & |\theta|>\theta_2,
 \end{cases}
 \end{equation}
-其长期平均折减为 $\mathbb{E}[f_{\text{osc}}]=(1-p_1)+r(p_1-p_2)$，其中 $p_i=\Pr(|\theta|>\theta_i)$ 由风场驱动。仿真文献给出的典型量级：$|\theta|\approx0.3^{\circ}\sim0.65^{\circ}$，面内周期约 $5$~day，纵向局部周期约 $6$~h，可作为风场-姿态联合蒙特卡洛的先验范围。
+with long-run mean $\mathbb{E}[f_{\text{osc}}]=(1-p_1)+r(p_1-p_2)$, where $p_i=\Pr(|\theta|>\theta_i)$ is wind-driven. Simulation literature suggests $|\theta|\approx0.3^{\circ}\sim0.65^{\circ}$, in-plane libration period $\approx5$~day, and local longitudinal period $\approx6$~h; these serve as priors for wind/attitude Monte Carlo.
 
-\paragraph{火箭故障对有效载荷的折算。}
-将完全失败/部分失败拆分：
+\paragraph{Rocket failure folded into effective payload.}
+Separate total vs. partial failures:
 \begin{equation}
 m_{\text{eff}}=m\bigl(1-p_f-\alpha p_p\bigr),\qquad
 N\approx\left\lceil\frac{M_{\text{total}}}{m_{\text{eff}}}\right\rceil.
 \end{equation}
-吸收“停飞调查”后，名义发射节奏 $c_0$ 的可用度近似为
+Including mishap-induced stand-down, nominal cadence $c_0$ is derated by
 \begin{equation}
 \lambda=c_0p_{\text{mishap}},\quad
 A_{\text{rocket}}=\frac{1}{1+\lambda D},\quad
@@ -841,59 +841,45 @@ c_{\text{eff}}=c_0A_{\text{rocket}},\quad
 T\approx \frac{N}{c_{\text{eff}}}.
 \end{equation}
 
-\paragraph{电梯损坏/碎片撞击的泊松建模。}
-将撞击视为泊松过程，年期望撞击次数
+\paragraph{Elevator damage / debris hits as Poisson process.}
+Treat hits as Poisson; annual expected hits
 \begin{equation}
 \mu=\int F(d,h)\,A_{\text{proj}}(h)\,dh,\quad
 p(\ge1)=1-e^{-\mu},\quad
 p_{\text{cut}}=1-e^{-\mu_{\text{cut}}},
 \end{equation}
-其中 $F$ 为通量，$A_{\text{proj}}$ 为投影面积。撞击后的运力折减可用分段 $f_{\text{dmg}}\in\{1,\beta,0\}$；把 $p_{\text{down}|\text{hit}}$、$p_{\text{cat}|\text{hit}}$ 接到 $\lambda_{\text{down}}$ 即可进入可用度公式。
+where $F$ is flux and $A_{\text{proj}}$ the projected area. Post-hit derating can use $f_{\text{dmg}}\in\{1,\beta,0\}$; map $p_{\text{down}|\text{hit}}$, $p_{\text{cat}|\text{hit}}$ into $\lambda_{\text{down}}$ for availability.
 
-\paragraph{可直接抄用的默认参数（情景分析起点）。}
-表~\ref{tab:default_params_task2} 汇总了本节出现的缺省量级，便于直接放入敏感性或蒙特卡洛脚本。
+\paragraph{Ready-to-use default parameters (scenario seeds).}
+Table~\ref{tab:default_params_task2} summarizes baseline magnitudes for direct use in sensitivity or Monte Carlo scripts.
 
 \begin{table}[htbp]
 \centering
-\caption{Task~2 非完美运行默认参数（可作为基线并做区间扫描）}
+\caption{Task~2 default parameters for non-ideal operations (baseline ranges for sensitivity sweeps)}
 \label{tab:default_params_task2}
 \renewcommand{\arraystretch}{1.12}
 \begin{tabular}{lll}
 \toprule
-\textbf{类别} & \textbf{参数/取值} & \textbf{说明} \\
+\textbf{Category} & \textbf{Parameter / value} & \textbf{Note} \\
 \midrule
-缆索摆动 & $|\theta|\approx0.3^{\circ}\sim0.65^{\circ}$ & 上行+制动后残余净摆动范围 \\
- & $P_{\text{osc}}\approx6$~h & 纵向局部周期量级 \\
- & $P_{\text{in-plane}}\approx5$~day & 面内 libration 周期 \\
-火箭失败 & $p_{\text{mishap}}\approx0.115$ & 2000--2023/01 统计（全口径） \\
- & $p_{\text{launch}}=1.78\times10^{-2}$ & 发射阶段基线失败率（NASA/ESAS 类比） \\
- & $p_{\text{land}}=10^{-3}$ & 月面着陆失败率占位 \\
- & $p_{\text{dock,auto}}=1.03\times10^{-2}$ & 自动交会对接失败 \\
- & $p_{\text{dock,crew}}=4.35\times10^{-3}$ & 有人/可接管对接失败 \\
-电梯碎片 & $\lambda_{\text{hit,untracked}}=0.1/\text{day}$ & LEO 小碎片命中频度 \\
- & $\lambda_{\text{hit,tracked}}=0.01/\text{day}$ & LEO 可跟踪碎片命中频度（不规避） \\
- & $\lambda_{\text{threat,GEO/MEO}}=0.1\sim0.4/\text{yr}$ & GEO/MEO conjunction 威胁频度 \\
-流星雨 & $p_{\text{cat}}=10^{-5}/\text{yr}$ & Leonids 常规峰值导致毁坏概率 \\
- & $p_{\text{cat,max}}=1.6\times10^{-3}/\text{yr}$ & 2031 级极端事件占位 \\
-参数化 & $r\in(0,1)$, $\theta_1,\theta_2$, $\beta\in(0,1)$ & 折减阈值与限载系数（可灵敏度分析） \\
+Tether oscillation & $|\theta|\approx0.3^{\circ}\sim0.65^{\circ}$ & Residual swing range after ascent/braking \\
+ & $P_{\text{osc}}\approx6$~h & Local longitudinal period \\
+ & $P_{\text{in-plane}}\approx5$~day & In-plane libration period \\
+Rocket failures & $p_{\text{mishap}}\approx0.115$ & 2000--2023/01 total mishap rate \\
+ & $p_{\text{launch}}=1.78\times10^{-2}$ & Baseline launch failure (NASA/ESAS analog) \\
+ & $p_{\text{land}}=10^{-3}$ & Lunar landing failure placeholder \\
+ & $p_{\text{dock,auto}}=1.03\times10^{-2}$ & Automated rendezvous/docking failure \\
+ & $p_{\text{dock,crew}}=4.35\times10^{-3}$ & Crew-assisted docking failure \\
+Elevator debris & $\lambda_{\text{hit,untracked}}=0.1/\text{day}$ & LEO untracked small-debris hit frequency \\
+ & $\lambda_{\text{hit,tracked}}=0.01/\text{day}$ & LEO tracked debris hit frequency (no avoidance) \\
+ & $\lambda_{\text{threat,GEO/MEO}}=0.1\sim0.4/\text{yr}$ & GEO/MEO conjunction threat frequency \\
+Meteor shower & $p_{\text{cat}}=10^{-5}/\text{yr}$ & Leonids typical-peak catastrophic probability \\
+ & $p_{\text{cat,max}}=1.6\times10^{-3}/\text{yr}$ & Extreme (2031-like) catastrophic placeholder \\
+Parameter knobs & $r\in(0,1)$, $\theta_1,\theta_2$, $\beta\in(0,1)$ & Derating thresholds and load-limit factors \\
 \bottomrule
 \end{tabular}
 \end{table}
-
-% =========================
-% Add BibTeX keys (put into your .bib)
-% =========================
-% @techreport{nasa_launch_assembly_reliability_2013,
-%   title={Launch and Assembly Reliability Analysis for ...},
-%   institution={NASA Technical Reports Server (NTRS)},
-%   year={2013},
-%   note={NTRS ID: 20130012764},
-% }
-% @report{isec_debris_2010,
-%   title={The Space Elevator and the Space Debris Environment (Chapter 8)},
-%   institution={International Space Elevator Consortium (ISEC)},
-%   year={2010},
-% }
+These defaults mirror the provided failure/threat rates; when higher-fidelity environment or component data arrive, scale or scenario-replace entries in this table accordingly.
 
 \subsubsection{Motivation and Modeling Scope}
 \label{sec:model2_scope}
@@ -1686,3 +1672,5 @@ AI Output
 %%                                   mcmthesis-demo.pdf.
 %%
 %% End of file `mcmthesis-demo.tex'.
+
+
