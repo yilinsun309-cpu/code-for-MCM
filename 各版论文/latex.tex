@@ -100,9 +100,9 @@ Communicate the results through a policy-oriented recommendation, summarizing mo
 \subsection{Notation}
 \begin{table}[htbp]
 \centering
-\caption{Notations and Definitions}
+\caption{Notations (Tasks 1--2)}
 \label{tab:notation}
-\renewcommand{\arraystretch}{1.2}
+\renewcommand{\arraystretch}{1.15}
 \begin{tabular}{clcc}
 \toprule
 \textbf{Symbol} & \textbf{Definition} & \textbf{Unit} & \textbf{Value/Est.} \\
@@ -135,6 +135,25 @@ $\lambda_s^{\text{max}}$ & Max annual cadence at site $s$ & launches/yr & from f
 $c_s$ & Allocated cadence at site $s$ ($c_s=N_s/T$) & launches/yr & $\le \lambda_s^{\text{max}}$ \\
 $N_s$ & Launches assigned to site $s$ over horizon $T$ & launches & decision \\
 $\Delta t_s$ & Avg. interval at site $s$ ($365/\lambda_s^{\text{max}}$) & days & computed \\
+\midrule
+\multicolumn{4}{l}{\textit{\textbf{Task 2: Stochastic programs \& Markov model}}} \\
+$\mathcal{L}$ & Set of operational programs $\{1,2,3,4,5\}$ & - & Defined \\
+$6$ & Absorbing failure state (rocket removed permanently) & - & Defined \\
+$\bar{\mathcal{L}}$ & Extended state space $\mathcal{L}\cup\{6\}$ & - & Defined \\
+$\phi_h(l)$ & Nominal next-program rule under scenario $h$ & - & Task 1 \\
+$p_{l6}$ & Failure probability during program $l$ (transition to state 6) & - & TBD \\
+$\bar{\mathbf P}^{(h)}$ & Markov transition matrix under scenario $h$ on $\bar{\mathcal{L}}$ & - & Derived \\
+$L(t)$ & Program/state of a rocket at time $t$ & - & Simulated \\
+\multicolumn{4}{l}{\textit{\textbf{Robust scheduling \& replacement}}} \\
+$I(t)$ & Number of active rockets at time $t$ & rockets & Simulated \\
+$I_{\text{safe}}$ & Safety threshold for active fleet size & rockets & From Task 1 \\
+$R(t)$ & Replacement (relaunch) decision at time $t$ & rockets & Policy \\
+$\delta$ & Replacement latency (delay before replacement becomes available, days; divide by 365 when used with year-based $t$) & day & TBD \\
+$\Delta \tau$ & Time buffer added to absorb disruptions & day & Tuned \\
+$\eta_{\text{pack}}$ & Packing efficiency for water (net water per nominal payload) & - & $0.8\sim 1.0$ \\
+$\kappa_{\text{svc}}$ & Water handling service-time multiplier & - & $1.0\sim 1.5$ \\
+\multicolumn{4}{l}{\textit{\textbf{Failure loss (optional)}}} \\
+$c_l^{\text{loss}}$ & Cost/loss incurred if failure occurs during program $l$ & USD & TBD \\
 \bottomrule
 \end{tabular}
 \vspace{0.2cm}
@@ -143,35 +162,6 @@ $\Delta t_s$ & Avg. interval at site $s$ ($365/\lambda_s^{\text{max}}$) & days &
 $) and annual elevator throughput.} \\
 \textit{$^\dagger$Note: $f_{cycle}$ corresponds to a 6-day round trip cycle (approximately 
 $365/6$ per year).}
-\caption{Additional Notations for Task 2 (Non-Ideal Conditions)}
-\label{tab:notation_task2}
-\renewcommand{\arraystretch}{1.15}
-\begin{tabular}{clcc}
-\toprule
-\textbf{Symbol} & \textbf{Definition} & \textbf{Unit} & \textbf{Value/Est.} \\
-\midrule
-\multicolumn{4}{l}{\textit{\textbf{Stochastic Programs \& Markov Model}}} \\
-$\mathcal{L}$ & Set of operational programs $\{1,2,3,4,5\}$ & - & Defined \\
-$6$ & Absorbing failure state (rocket removed permanently) & - & Defined \\
-$\bar{\mathcal{L}}$ & Extended state space $\mathcal{L}\cup\{6\}$ & - & Defined \\
-$\phi_h(l)$ & Nominal next-program rule under scenario $h$ & - & Task 1 \\
-$p_{l6}$ & Failure probability during program $l$ (transition to state 6) & - & TBD \\
-$\bar{\mathbf P}^{(h)}$ & Markov transition matrix under scenario $h$ on $\bar{\mathcal{L}}$ & - & Derived \\
-$L(t)$ & Program/state of a rocket at time $t$ & - & Simulated \\
-\midrule
-\multicolumn{4}{l}{\textit{\textbf{Robust Scheduling \& Replacement}}} \\
-$I(t)$ & Number of active rockets at time $t$ & rockets & Simulated \\
-$I_{\text{safe}}$ & Safety threshold for active fleet size & rockets & From Task 1 \\
-$R(t)$ & Replacement (relaunch) decision at time $t$ & rockets & Policy \\
-$\delta$ & Replacement latency (delay before replacement becomes available, days; divide by 365 when used with year-based $t$) & day & TBD \\
-$\Delta \tau$ & Time buffer added to absorb disruptions & day & Tuned \\
-$\eta_{\text{pack}}$ & Packing efficiency for water (net water per nominal payload) & - & $0.8\sim 1.0$ \\
-$\kappa_{\text{svc}}$ & Water handling service-time multiplier & - & $1.0\sim 1.5$ \\
-\midrule
-\multicolumn{4}{l}{\textit{\textbf{Failure Loss (Optional)}}} \\
-$c_l^{\text{loss}}$ & Cost/loss incurred if failure occurs during program $l$ & USD & TBD \\
-\bottomrule
-\end{tabular}
 \end{table}
 
                                                                                
