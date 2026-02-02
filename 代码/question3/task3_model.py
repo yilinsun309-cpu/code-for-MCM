@@ -16,6 +16,7 @@ import heapq
 import json
 import math
 import random
+from collections import deque
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 DAYS_PER_YEAR = 365.0
@@ -218,6 +219,10 @@ def validate_params(params: Task3Params) -> None:
         raise ValueError("min_delivery_interval must be >= 0")
     if not (0.0 <= params.down_ratio < 1.0):
         raise ValueError("down_ratio must be within [0, 1)")
+    if params.I_safe is not None and params.I_safe < 0:
+        raise ValueError("I_safe must be >= 0")
+    if params.initial_rockets is not None and params.initial_rockets < 0:
+        raise ValueError("initial_rockets must be >= 0")
     if not (0.0 < params.alpha <= 1.0):
         raise ValueError("alpha must be within (0, 1]")
     if params.r_degrade_start is not None and params.r_degrade_end is not None:
@@ -329,6 +334,7 @@ class Task3DES:
         self.max_deficit = 0
         self.pending_replacements = 0
         self.next_launch_slot = 0.0
+        self.launch_slot_interval = 1.0 / params.f_total
         self.next_rid = 1
 
         self.inventory_event_time: Optional[float] = None
@@ -351,7 +357,7 @@ class Task3DES:
         self.gross_day = gross_per_day(params)
 
         self.rocks: Dict[int, Rocket] = {}
-        self.waiting: List[int] = []
+        self.waiting = deque()
         self.waiting_since: Dict[int, float] = {}
         self.pq: List[Event] = []
         self.seq = 0
@@ -368,11 +374,21 @@ class Task3DES:
         if deficit > self.max_deficit:
             self.max_deficit = deficit
 
-    def add_rocket(self, init_state: int) -> None:
+    def reserve_launch_slot(self, ready_time: float) -> float:
+        start_time = max(ready_time, self.next_launch_slot)
+        wait = start_time - ready_time
+        if wait * DAYS_PER_YEAR > self.max_launch_wait:
+            self.max_launch_wait = wait * DAYS_PER_YEAR
+        self.next_launch_slot = start_time + self.launch_slot_interval
+        return start_time
+
+    def add_rocket(self, init_state: int, start_time: Optional[float] = None) -> None:
         rid = self.next_rid
         self.next_rid += 1
         self.rocks[rid] = Rocket(rid=rid, state=init_state, payload=self.q_water)
-        self.schedule_event(self.t + self.tau_robust[init_state], "rocket", rid=rid)
+        if start_time is None:
+            start_time = self.t
+        self.schedule_event(start_time + self.tau_robust[init_state], "rocket", rid=rid)
 
     def schedule_program3(self, rid: int, start_time: float) -> None:
         r = self.rocks.get(rid)
@@ -455,12 +471,12 @@ class Task3DES:
             rid = self.waiting[0]
             r = self.rocks.get(rid)
             if r is None or r.state == 6:
-                self.waiting.pop(0)
+                self.waiting.popleft()
                 self.waiting_since.pop(rid, None)
                 continue
             if self.S < r.payload:
                 break
-            self.waiting.pop(0)
+            self.waiting.popleft()
             wait_start = self.waiting_since.pop(rid, None)
             if wait_start is not None:
                 wait_days = (self.t - wait_start) * DAYS_PER_YEAR
@@ -478,17 +494,13 @@ class Task3DES:
             return
         for _ in range(deficit):
             t_ready = self.t + self.params.delta_replacement
-            t_start = max(t_ready, self.next_launch_slot)
-            wait = t_start - t_ready
-            if wait * DAYS_PER_YEAR > self.max_launch_wait:
-                self.max_launch_wait = wait * DAYS_PER_YEAR
-            self.next_launch_slot = t_start + 1.0 / self.params.f_total
+            t_start = self.reserve_launch_slot(t_ready)
             self.pending_replacements += 1
             self.schedule_event(t_start, "insert")
 
     def handle_insert(self) -> None:
         self.pending_replacements = max(0, self.pending_replacements - 1)
-        self.add_rocket(self.start_state)
+        self.add_rocket(self.start_state, start_time=self.t)
         self.launches += 1
         self.update_deficit()
 
@@ -529,6 +541,11 @@ class Task3DES:
             return
         r.state = next_state
 
+        if next_state in (1, 2):
+            start_time = self.reserve_launch_slot(self.t)
+            self.schedule_event(start_time + self.tau_robust[next_state], "rocket", rid=rid)
+            return
+
         if next_state == 3 and requires_inventory(self.params.scenario, state, next_state):
             r.loaded_from_elevator = True
             if self.cap_eff <= 0:
@@ -555,7 +572,10 @@ class Task3DES:
             init_count = int(self.I_safe or 0)
 
         for _ in range(int(init_count)):
-            self.add_rocket(self.start_state)
+            start_time = self.t
+            if self.start_state in (1, 2):
+                start_time = self.reserve_launch_slot(self.t)
+            self.add_rocket(self.start_state, start_time=start_time)
 
         t_end = self.params.d_days / DAYS_PER_YEAR
         while self.pq:
@@ -629,6 +649,12 @@ def summarize_results(
     gap_q = quantile(max_gaps, params.alpha)
     S_moon_star = c_max * gap_q
 
+    wq_runs = [max(r.max_inventory_wait_days, r.max_launch_wait_days) for r in results]
+    wq_q = quantile(wq_runs, params.alpha)
+    delta_days = params.delta_replacement * DAYS_PER_YEAR
+    S_moon_min = c_max * (delta_days + wq_q)
+    I_safe = params.I_safe if params.I_safe is not None else compute_i_safe(params)
+
     stockout_runs = sum(1 for r in results if r.stockout)
     feasible_runs = len(results) - stockout_runs
 
@@ -676,6 +702,11 @@ def summarize_results(
         "c_max_ton_per_day": c_max,
         "max_gap_quantile_days": gap_q,
         "S_moon_star_ton": S_moon_star,
+        "W_q_quantile_days": wq_q,
+        "S_moon_min_ton": S_moon_min,
+        "delta_replacement_days": delta_days,
+        "I_safe": I_safe,
+        "launch_slot_interval_days": DAYS_PER_YEAR / params.f_total,
         "mean_min_inventory_ton": mean(min_inv),
         "min_inventory_ton": min(min_inv) if min_inv else 0.0,
         "mean_arrivals": mean(arrivals),
@@ -721,6 +752,8 @@ def main() -> None:
     parser.add_argument("--eta-pack", type=float, default=None, help="Water packing efficiency")
     parser.add_argument("--kappa-svc", type=float, default=None, help="Service time multiplier")
     parser.add_argument("--alpha", type=float, default=None, help="Confidence level for safety stock")
+    parser.add_argument("--i-safe", type=int, default=None, help="Override I_safe fleet size")
+    parser.add_argument("--initial-rockets", type=int, default=None, help="Initial rocket count")
     args = parser.parse_args()
 
     params = Task3Params()
@@ -750,6 +783,10 @@ def main() -> None:
         data["kappa_svc"] = args.kappa_svc
     if args.alpha is not None:
         data["alpha"] = args.alpha
+    if args.i_safe is not None:
+        data["I_safe"] = args.i_safe
+    if args.initial_rockets is not None:
+        data["initial_rockets"] = args.initial_rockets
 
     params = Task3Params(**data)
     validate_params(params)
