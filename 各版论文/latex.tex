@@ -808,7 +808,7 @@ p_{46} &= p_{\text{dock,auto}} \quad(\text{from segment-4 ARD failure}),\\
 p_{56} &= 3.60\times 10^{-4}\quad(\text{lunar return entry LOC, ESAS}),\\
 p_{36} &= p_{\text{land}}.
 \end{align}
-These instantiate the previously TBD return-leg probabilities with values from the segmented rocket failure dataset; alternative scenarios can still adjust them in sensitivity analysis.
+These instantiate the previously TBD return-leg probabilities with values from the segmented rocket failure dataset (see Table~\ref{tab:failure_prob_task2}); scenarios may adjust them in sensitivity analysis.
 
 \paragraph{Effective elevator availability.}
 If a downtime-event triggers a repair time $T_{\text{repair}}$ (days), then over a long horizon
@@ -1386,7 +1386,7 @@ $q_{\text{water}}$ & Net water per successful delivery arrival & ton & $\eta_{\t
 $\eta_{\text{pack}}$ & Water packing efficiency (Task~2 coupling) & -- & $0.8\sim 1$\\
 $\kappa_{\text{svc}}$ & Water service-time multiplier (Task~2 coupling) & -- & $1\sim 1.5$\\
 $f_{total}$ & Total Earth launch cadence $=\sum_{s\in\mathcal{S}} c_s$ & 1/yr & from site caps $c_s\le\lambda_s^{\text{max}}$\\
-$\delta$ & Replacement latency (Task~2) & day & TBD\\
+$\delta$ & Replacement latency (Task~2) & day & 14 (baseline, scenario-tunable)\\
 $W_q$ & Queueing-induced waiting time (bottleneck) & day & estimated / simulated\\
 $G$ & Delivery drought gap (max inter-arrival or disruption gap) & day & simulated\\
 \bottomrule
