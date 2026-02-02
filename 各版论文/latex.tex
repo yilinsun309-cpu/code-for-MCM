@@ -163,7 +163,7 @@ $L(t)$ & Program/state of a rocket at time $t$ & - & Simulated \\
 $I(t)$ & Number of active rockets at time $t$ & rockets & Simulated \\
 $I_{\text{safe}}$ & Safety threshold for active fleet size & rockets & From Task 1 \\
 $R(t)$ & Replacement (relaunch) decision at time $t$ & rockets & Policy \\
-$\delta$ & Replacement latency (delay before replacement becomes available) & day & TBD \\
+$\delta$ & Replacement latency (delay before replacement becomes available, days; divide by 365 when used with year-based $t$) & day & TBD \\
 $\Delta \tau$ & Time buffer added to absorb disruptions & day & Tuned \\
 $\eta_{\text{pack}}$ & Packing efficiency for water (net water per nominal payload) & - & $0.8\sim 1.0$ \\
 $\kappa_{\text{svc}}$ & Water handling service-time multiplier & - & $1.0\sim 1.5$ \\
@@ -541,7 +541,7 @@ C_{launch}\cdot N_{Rock,A}^{*}
 + C_{maint}\cdot T_A^{*}
 + C_{TV\_fixed},
 \end{equation}
-where $M_{SE}=M_{goal}$ and $T_A^{*}=M_{goal}/Cap_{SE}$.
+where $M_{SE}=M_{goal}$ and $T_A^{*}=\max\!\left(\tau_{\text{transit}}+\frac{M_{goal}}{Cap_{SE}},\ \frac{N_{Rock}}{\sum_{s\in\mathcal{S}} c_s}\right)$ is the project duration defined above.
 
 \subsubsection{Scenario B: Pure Rocket Scenario}
 
@@ -1256,7 +1256,7 @@ constrained by the aggregate cadence $f_{total}=\sum_s c_s$ (with $c_s\le\lambda
 
 \paragraph{Launch-slot server (cadence constraint).}
 Let $t_{\text{slot}}$ be the next available launch-slot time (initialized $t_{\text{slot}}=0$).
-When a replacement order becomes ready at time $t_{\text{ready}}=t+\delta$, its actual launch start time is
+When a replacement order becomes ready at time $t_{\text{ready}}=t+\delta/365$ (noting $t$ is in years and $\delta$ is in days), its actual launch start time is
 \[
 t_{\text{start}}=\max\{t_{\text{ready}},\ t_{\text{slot}}\},\qquad
 t_{\text{slot}} \leftarrow t_{\text{start}}+\frac{1}{\sum_{s\in\mathcal{S}} c_s}.
@@ -1614,9 +1614,9 @@ with $E_{\text{CO}_2e}$ from fuel burn $\times$ emission factor (rockets) or ele
 \subsection{Systemic metric (failure-induced sunk cost)}
 Define environmental sunk-cost intensity:
 \begin{equation}
-ESCF=\frac{\sum_{k\in F} E_{\text{env}}(k)}{\sum_{s\in S} M_{\text{delivered}}(s)},
+ESCF=\frac{\sum_{k\in F} E_{\text{env}}(k)}{\sum_{d\in D} M_{\text{delivered}}(d)},
 \end{equation}
-where $F$ is the set of failure events (launch/transfer aborts), $E_{\text{env}}(k)$ their environmental input proxies, and $S$ the set of successful deliveries. It measures extra environmental input per delivered ton; larger values imply lower environmental resilience.
+where $F$ is the set of failure events (launch/transfer aborts), $E_{\text{env}}(k)$ their environmental input proxies, and $D$ the set of successful deliveries. It measures extra environmental input per delivered ton; larger values imply lower environmental resilience.
 
 \subsection{Outputs and visualization (minimum set)}
 \begin{itemize}
@@ -1635,9 +1635,9 @@ where $F$ is the set of failure events (launch/transfer aborts), $E_{\text{env}}
 
 \subsection{Implementation checklist (no new data required)}
 \begin{itemize}
-    \item Log per-year, per-site launches $N_{\text{launch},j}(y)$, failures, replacement launches, and total fuel/energy.
-    \item In the dispatcher: if a site hits $f_{\text{green},j}$, delay to next-year slot or reassign site before scheduling.
-    \item Report and plot $E_{\text{strat}}$, $CI$, $ESCF$ for scenarios A/B/C.
+\item Log per-year, per-site launches $N_{\text{launch},j}(y)$, failures, replacement launches, and total fuel/energy.
+\item In the dispatcher: if a site hits $f_{\text{green},j}$, delay to next-year slot or reassign site before scheduling.
+\item Report and plot $E_{\text{strat}}$, $CI$, $ESCF$ for scenarios A/B/C.
 \end{itemize}
 
 \subsubsection{Cost Accounting and Scenario-Specific Elevator Water Mass}
