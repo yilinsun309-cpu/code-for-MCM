@@ -448,28 +448,23 @@ def plot_pareto(
     line_color = "#8bc34a"
     marker_edge = "#cfe8a9"
 
-    if T_p.size > 1:
+    # 1) 只按 T 升序连帕累托边界，避免跳线
+    if T_p.size > 0:
         order = np.argsort(T_p)
         ax.plot(T_p[order], C_p[order], color=line_color, linewidth=2.2)
-    else:
-        ax.scatter(T_p, C_p, s=30, color=line_color)
+        ax.scatter(T_p[order], C_p[order], s=32, color=line_color, edgecolors=marker_edge, linewidths=0.6)
 
+    # 2) 加权和解仅作散点，不连线，避免“穿越可行域”的伪直线
     if ws_data.shape[0] > 0:
         ws_sorted = ws_data[np.argsort(ws_data[:, 2])]
-        ax.plot(
-            ws_sorted[:, 2],
-            ws_sorted[:, 3],
-            color=line_color,
-            linewidth=1.6,
-            alpha=0.8,
-        )
         ax.scatter(
             ws_sorted[:, 2],
             ws_sorted[:, 3],
-            s=38,
-            color=line_color,
+            s=36,
+            color="#4dd0e1",
             edgecolors=marker_edge,
             linewidths=0.6,
+            alpha=0.85,
         )
 
         label_count = min(7, ws_sorted.shape[0])
