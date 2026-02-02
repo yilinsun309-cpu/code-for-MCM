@@ -1,211 +1,506 @@
-import heapq, random, math
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+#!/usr/bin/env python3
+"""Task 2: Reliability simulation with absorbing failures and DES.
 
-INF = 10**30
+Implements the Task 2 model described in the paper:
+- absorbing Markov failures (state 6)
+- event-driven discrete-event simulation (DES)
+- Apex inventory coupling for elevator-supported scenarios
+- replacement with latency and launch cadence constraint
+"""
 
-def exp_time(rate: float) -> float:
-    """Sample exponential waiting time with rate > 0."""
-    if rate <= 0:
-        return INF
-    u = random.random()
-    return -math.log(1 - u) / rate
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass, field
+import argparse
+import heapq
+import json
+import math
+import random
+from collections import deque
+from typing import Any, Deque, Dict, List, Optional, Tuple
+
+INF = 1.0e30
+DAYS_PER_YEAR = 365.0
+
+# -------------------- Global Defaults --------------------
+DEFAULT_SCENARIO = 3
+DEFAULT_M_GOAL = 1.0e8
+DEFAULT_CAP_SE = 5.37e5
+DEFAULT_CAP_ROCK = 125.0
+DEFAULT_F_TOTAL = 3834.0
+DEFAULT_TAU_DAYS = {1: 3.0, 2: 3.0, 3: 3.0, 4: 3.0, 5: 3.0}
+DEFAULT_DELTA_TAU_DAYS = 0.0
+DEFAULT_P_FAIL = {1: 0.0, 2: 1.78e-2, 3: 1.0e-3, 4: 1.03e-2, 5: 0.0}
+DEFAULT_FAIL_COST = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0}
+DEFAULT_C_LAUNCH = 1.5e7
+DEFAULT_I_SAFE = 70
+DEFAULT_DELTA_REPLACEMENT_DAYS = 2.0
+DEFAULT_DOWN_RATIO = (0.0, 0.1)
+DEFAULT_INITIAL_ROCKETS = None
+DEFAULT_MAX_TIME_YEARS = 200.0
+DEFAULT_SEED = 1
+DEFAULT_LOG_EVERY = 10000
+DEFAULT_MC_LOG_EVERY = 1
+DEFAULT_VERBOSE = False
+
+
+@dataclass(frozen=True)
+class Task2Params:
+    scenario: int = DEFAULT_SCENARIO
+    M_goal: float = DEFAULT_M_GOAL
+    Cap_SE: float = DEFAULT_CAP_SE
+    Cap_Rock: float = DEFAULT_CAP_ROCK
+    f_total: float = DEFAULT_F_TOTAL
+    tau: Dict[int, float] = field(
+        default_factory=lambda: {
+            k: v / DAYS_PER_YEAR
+            for k, v in DEFAULT_TAU_DAYS.items()
+        }
+    )
+    delta_tau: float = DEFAULT_DELTA_TAU_DAYS / DAYS_PER_YEAR
+    p_fail: Dict[int, float] = field(
+        default_factory=lambda: DEFAULT_P_FAIL.copy()
+    )
+    fail_cost: Dict[int, float] = field(
+        default_factory=lambda: DEFAULT_FAIL_COST.copy()
+    )
+    C_launch: float = DEFAULT_C_LAUNCH
+    I_safe: int = DEFAULT_I_SAFE
+    delta_replacement: float = DEFAULT_DELTA_REPLACEMENT_DAYS / DAYS_PER_YEAR
+    down_ratio: Tuple[float, float] = DEFAULT_DOWN_RATIO
+    initial_rockets: Optional[int] = DEFAULT_INITIAL_ROCKETS
+    max_time: float = DEFAULT_MAX_TIME_YEARS
+    seed: int = DEFAULT_SEED
+
+
+@dataclass
+class SimulationResult:
+    T_star: float
+    delivered: float
+    failures: int
+    launches: int
+    fail_cost: float
+    fail_loss_cost: float
+    replace_cost: float
+    max_deficit: int
+    completed: bool
+    down_ratio: float
+
+
+@dataclass
+class Event:
+    time: float
+    seq: int
+    etype: str
+    rid: Optional[int] = None
+
+    def __lt__(self, other: "Event") -> bool:
+        if self.time != other.time:
+            return self.time < other.time
+        return self.seq < other.seq
+
 
 @dataclass
 class Rocket:
     rid: int
-    state: int          # 2,3,4,5 or 6
-    payload: float      # q_r
-    alive: bool = True
+    state: int
+    payload: float
 
-@dataclass(order=True)
-class Event:
-    time: float
-    etype: str = field(compare=False)     # "rocket", "elevator", "replace"
-    rid: Optional[int] = field(default=None, compare=False)
-    count: int = field(default=0, compare=False)  # for replace arrivals
 
-class Simulator:
-    def __init__(self,
-                 scenario_h: int,
-                 tau: Dict[int, float],             # duration per program (days)
-                 p_fail: Dict[int, float],          # p_{l6} for l in {2,3,4,5}
-                 phi: Dict[int, Dict[int, int]],    # phi[h][l]=l'
-                 v_e: float,                        # elevator supply rate (ton/day)
-                 lambda_down: float,                # Up->Down rate (1/day)
-                 lambda_up: float,                  # Down->Up rate (1/day)
-                 I_safe: int,
-                 delta: float,                      # replacement latency (days)
-                 M_goal: float,
-                 seed: int = 0):
-        random.seed(seed)
-        self.h = scenario_h
-        self.tau = tau
-        self.p_fail = p_fail
-        self.phi = phi
-        self.v_e = v_e
-        self.lambda_down = lambda_down
-        self.lambda_up = lambda_up
-        self.I_safe = I_safe
-        self.delta = delta
-        self.M_goal = M_goal
+def load_config(path: str) -> Dict[str, Any]:
+    if not path.endswith(".json"):
+        raise ValueError("Only JSON config is supported")
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _normalize_int_key_dict(data: Dict[str, Any]) -> Dict[int, float]:
+    out: Dict[int, float] = {}
+    for k, v in data.items():
+        out[int(k)] = float(v)
+    return out
+
+
+def parse_down_ratio(value: Any) -> Tuple[float, float]:
+    if isinstance(value, (list, tuple)):
+        if len(value) != 2:
+            raise ValueError("down_ratio must be a float or a pair")
+        return (float(value[0]), float(value[1]))
+    return (float(value), float(value))
+
+
+def apply_overrides(params: Task2Params, overrides: Dict[str, Any]) -> Task2Params:
+    data = asdict(params)
+    for key, value in overrides.items():
+        if key in data:
+            data[key] = value
+
+    if "tau" in overrides:
+        data["tau"] = _normalize_int_key_dict(overrides["tau"])
+    if "tau_days" in overrides:
+        tau_days = _normalize_int_key_dict(overrides["tau_days"])
+        data["tau"] = {k: v / DAYS_PER_YEAR for k, v in tau_days.items()}
+    if "p_fail" in overrides:
+        data["p_fail"] = _normalize_int_key_dict(overrides["p_fail"])
+    if "fail_cost" in overrides:
+        data["fail_cost"] = _normalize_int_key_dict(overrides["fail_cost"])
+    if "down_ratio" in overrides:
+        data["down_ratio"] = parse_down_ratio(overrides["down_ratio"])
+
+    return Task2Params(**data)
+
+
+def validate_params(params: Task2Params) -> None:
+    if params.scenario not in (1, 2, 3):
+        raise ValueError("scenario must be 1, 2, or 3")
+    if params.M_goal <= 0:
+        raise ValueError("M_goal must be > 0")
+    if params.Cap_Rock <= 0:
+        raise ValueError("Cap_Rock must be > 0")
+    if params.f_total <= 0:
+        raise ValueError("f_total must be > 0")
+    if params.I_safe < 0:
+        raise ValueError("I_safe must be >= 0")
+    if params.C_launch < 0:
+        raise ValueError("C_launch must be >= 0")
+    for l in range(1, 6):
+        if l not in params.tau:
+            raise ValueError("tau missing program {}".format(l))
+        if l not in params.fail_cost:
+            raise ValueError("fail_cost missing program {}".format(l))
+        if params.fail_cost[l] < 0:
+            raise ValueError("fail_cost must be >= 0")
+
+
+def phi_for_scenario(scenario: int) -> Dict[int, int]:
+    if scenario == 1:
+        return {1: 3, 3: 4, 4: 3}
+    if scenario == 2:
+        return {2: 3, 3: 5, 5: 2}
+    return {2: 3, 3: 4, 4: 3}
+
+
+def start_state_for_scenario(scenario: int) -> int:
+    return 1 if scenario == 1 else 2
+
+
+def requires_inventory(scenario: int, from_state: int, to_state: int) -> bool:
+    if to_state != 3:
+        return False
+    if scenario == 1:
+        return True
+    if scenario == 3:
+        return from_state == 4
+    return False
+
+
+class Task2Simulator:
+    def __init__(self, params: Task2Params, seed: int) -> None:
+        self.params = params
+        self.rng = random.Random(seed)
+        self.phi = phi_for_scenario(params.scenario)
+        self.start_state = start_state_for_scenario(params.scenario)
+        self.tau_robust = {k: params.tau[k] + params.delta_tau for k in params.tau}
 
         self.t = 0.0
-        self.E = 1  # elevator up/down
-        self.S = 0.0  # apex inventory (ton)
-        self.M = 0.0  # delivered mass to Moon (ton)
-        self.fail_count = 0
-        self.rocks: Dict[int, Rocket] = {}
-        self.waiting: List[int] = []  # rocket ids waiting for payload
+        self.M = 0.0
+        self.S = 0.0
+        self.failures = 0
+        self.launches = 0
+        self.fail_loss_cost = 0.0
+        self.replace_cost = 0.0
+        self.max_deficit = 0
+        self.pending_replacements = 0
+        self.next_launch_slot = 0.0
+        self.next_rid = 1
+        self.inventory_event_time: Optional[float] = None
 
+        dr_low, dr_high = params.down_ratio
+        if dr_low == dr_high:
+            self.down_ratio = dr_low
+        else:
+            self.down_ratio = self.rng.uniform(dr_low, dr_high)
+
+        if params.scenario in (1, 3):
+            self.cap_eff = (1.0 - self.down_ratio) * params.Cap_SE
+        else:
+            self.cap_eff = 0.0
+
+        self.rocks: Dict[int, Rocket] = {}
+        self.waiting: Deque[int] = deque()
         self.pq: List[Event] = []
+        self.seq = 0
+
+    def schedule_event(self, time: float, etype: str, rid: Optional[int] = None) -> None:
+        self.seq += 1
+        heapq.heappush(self.pq, Event(time=time, seq=self.seq, etype=etype, rid=rid))
 
     def active_count(self) -> int:
-        return sum(1 for r in self.rocks.values() if r.alive and r.state != 6)
+        return sum(1 for r in self.rocks.values() if r.state != 6)
 
-    def schedule(self, ev: Event):
-        heapq.heappush(self.pq, ev)
+    def update_deficit(self) -> None:
+        deficit = max(0, self.params.I_safe - self.active_count())
+        if deficit > self.max_deficit:
+            self.max_deficit = deficit
 
-    def init_elevator(self):
-        # start in Up, schedule first switch
-        dt = exp_time(self.lambda_down)
-        self.schedule(Event(self.t + dt, "elevator"))
+    def add_rocket(self, init_state: int) -> None:
+        rid = self.next_rid
+        self.next_rid += 1
+        self.rocks[rid] = Rocket(rid=rid, state=init_state, payload=self.params.Cap_Rock)
+        self.schedule_event(self.t + self.tau_robust[init_state], "rocket", rid=rid)
 
-    def add_rocket(self, rid: int, init_state: int, payload: float):
-        self.rocks[rid] = Rocket(rid=rid, state=init_state, payload=payload, alive=True)
-        # schedule its first completion
-        self.schedule(Event(self.t + self.tau[init_state], "rocket", rid=rid))
-
-    def fluid_update(self, new_t: float):
+    def fluid_update(self, new_t: float) -> None:
         dt = new_t - self.t
         if dt < 0:
             return
-        if self.E == 1:
-            self.S += self.v_e * dt
+        if self.cap_eff > 0:
+            self.S += self.cap_eff * dt
         self.t = new_t
 
-    def try_release_waiting(self):
-        # FIFO: try start program 3 for waiting rockets if inventory sufficient
-        new_wait = []
-        for rid in self.waiting:
+    def schedule_inventory_event(self) -> None:
+        if not self.waiting:
+            return
+        if self.cap_eff <= 0:
+            return
+        rid = self.waiting[0]
+        r = self.rocks.get(rid)
+        if r is None:
+            return
+        needed = r.payload - self.S
+        if needed <= 0:
+            return
+        ready_time = self.t + needed / self.cap_eff
+        if self.inventory_event_time is None or ready_time < self.inventory_event_time:
+            self.inventory_event_time = ready_time
+            self.schedule_event(ready_time, "inventory")
+
+    def release_waiting(self) -> None:
+        while self.waiting:
+            rid = self.waiting[0]
             r = self.rocks.get(rid)
             if r is None or r.state == 6:
+                self.waiting.popleft()
                 continue
-            if self.S >= r.payload:
-                self.S -= r.payload
-                # start program 3 now, schedule completion
-                self.schedule(Event(self.t + self.tau[3], "rocket", rid=rid))
-                r.state = 3
-            else:
-                new_wait.append(rid)
-        self.waiting = new_wait
+            if self.S < r.payload:
+                break
+            self.waiting.popleft()
+            self.S -= r.payload
+            self.schedule_event(self.t + self.tau_robust[3], "rocket", rid=rid)
+        if self.waiting:
+            self.schedule_inventory_event()
 
-    def trigger_replacement(self):
-        deficit = max(0, self.I_safe - self.active_count())
-        if deficit > 0:
-            self.schedule(Event(self.t + self.delta, "replace", count=deficit))
+    def order_replacements(self) -> None:
+        deficit = max(0, self.params.I_safe - (self.active_count() + self.pending_replacements))
+        if deficit <= 0:
+            return
+        for _ in range(deficit):
+            t_ready = self.t + self.params.delta_replacement
+            t_start = max(t_ready, self.next_launch_slot)
+            self.next_launch_slot = t_start + 1.0 / self.params.f_total
+            self.pending_replacements += 1
+            self.schedule_event(t_start, "insert")
 
-    def handle_elevator(self):
-        # switch state
-        self.E = 1 - self.E
-        # schedule next switch
-        rate = self.lambda_down if self.E == 1 else self.lambda_up
-        self.schedule(Event(self.t + exp_time(rate), "elevator"))
-        # if elevator just became up, inventory will start growing; we can also attempt release now
-        self.try_release_waiting()
+    def handle_insert(self) -> None:
+        self.pending_replacements = max(0, self.pending_replacements - 1)
+        self.add_rocket(self.start_state)
+        self.launches += 1
+        self.replace_cost += self.params.C_launch
+        self.update_deficit()
 
-    def handle_replace(self, count: int):
-        # add 'count' rockets; init state depends on scenario
-        start_state = 2 if self.h in (2, 3) else 4  # example; adjust if your scenario1 differs
-        base_id = max(self.rocks.keys(), default=0) + 1
-        for k in range(count):
-            self.add_rocket(base_id + k, start_state, payload=125.0)
-
-    def handle_rocket(self, rid: int):
+    def handle_rocket_event(self, rid: int) -> None:
         r = self.rocks.get(rid)
         if r is None or r.state == 6:
             return
-        l = r.state
+        state = r.state
 
-        # completion of program l: if it was delivery, count mass
-        if l == 3:
+        if state == 3:
             self.M += r.payload
 
-        # sample failure for l in {2,3,4,5}
-        pf = self.p_fail.get(l, 0.0)
-        if random.random() < pf:
-            # absorbing failure
+        pf = self.params.p_fail.get(state, 0.0)
+        if self.rng.random() < pf:
             r.state = 6
-            self.fail_count += 1
-            # replacement policy
-            self.trigger_replacement()
+            self.failures += 1
+            self.fail_loss_cost += self.params.fail_cost.get(state, 0.0)
+            self.order_replacements()
+            self.update_deficit()
             return
 
-        # transition to next program
-        l_next = self.phi[self.h].get(l, None)
-        if l_next is None:
+        next_state = self.phi.get(state)
+        if next_state is None:
             return
-        r.state = l_next
 
-        # if next program requires payload (program 3), need inventory
-        if l_next == 3:
+        r.state = next_state
+        if next_state == 3 and requires_inventory(self.params.scenario, state, next_state):
+            if self.cap_eff <= 0:
+                return
             if self.S >= r.payload:
                 self.S -= r.payload
-                self.schedule(Event(self.t + self.tau[3], "rocket", rid=rid))
+                self.schedule_event(self.t + self.tau_robust[3], "rocket", rid=rid)
             else:
-                # wait until enough inventory accumulates; will be retried on elevator events
                 self.waiting.append(rid)
+                self.schedule_inventory_event()
         else:
-            self.schedule(Event(self.t + self.tau[l_next], "rocket", rid=rid))
+            self.schedule_event(self.t + self.tau_robust[next_state], "rocket", rid=rid)
 
-    def run(self, max_time_days: float = 1e9):
-        while self.pq and self.M < self.M_goal:
+    def run(
+        self,
+        log_every: int = DEFAULT_LOG_EVERY,
+        verbose: bool = DEFAULT_VERBOSE,
+    ) -> SimulationResult:
+        init_count = self.params.initial_rockets
+        if init_count is None:
+            init_count = self.params.I_safe
+
+        for _ in range(int(init_count)):
+            self.add_rocket(self.start_state)
+
+        completed = False
+        event_count = 0
+        if verbose:
+            print(
+                "[开始] "
+                f"场景={self.params.scenario} I0={init_count} "
+                f"M_goal={self.params.M_goal} cap_eff={self.cap_eff:.2f}",
+                flush=True,
+            )
+        while self.pq:
             ev = heapq.heappop(self.pq)
-            if ev.time > max_time_days:
+            if ev.time > self.params.max_time:
                 break
             self.fluid_update(ev.time)
-            if ev.etype == "elevator":
-                self.handle_elevator()
-            elif ev.etype == "replace":
-                self.handle_replace(ev.count)
+            event_count += 1
+
+            if ev.etype == "inventory":
+                if self.inventory_event_time is None:
+                    continue
+                if abs(ev.time - self.inventory_event_time) > 1.0e-9:
+                    continue
+                self.inventory_event_time = None
+                self.release_waiting()
+            elif ev.etype == "insert":
+                self.handle_insert()
             elif ev.etype == "rocket":
-                self.handle_rocket(ev.rid)
+                if ev.rid is not None:
+                    self.handle_rocket_event(int(ev.rid))
 
-        return {
-            "T_star_days": self.t,
-            "delivered_M": self.M,
-            "failures": self.fail_count,
-            "active_rockets": self.active_count(),
-            "apex_inventory": self.S,
-            "waiting": len(self.waiting),
-        }
+            self.release_waiting()
+            if self.M >= self.params.M_goal:
+                completed = True
+                break
 
-# ---------- Example config ----------
-tau = {2: 0.5, 3: 3.0, 4: 3.0, 5: 4.0}  # days
-p_fail = {2: 1.78e-2, 3: 1e-3, 4: 1.03e-2, 5: 0.0}  # p56 TBD -> 0 for now
-phi = {
-    2: {2: 3, 3: 5, 5: 2},   # scenario 2
-    3: {2: 3, 3: 4, 4: 3},   # scenario 3
-    1: {3: 4, 4: 3},         # scenario 1 (rocket cycling at apex) example
-}
+            if verbose and log_every > 0 and event_count % log_every == 0:
+                pct = self.M / self.params.M_goal * 100.0
+                total_cost = self.fail_loss_cost + self.replace_cost
+                print(
+                    "[进度] "
+                    f"事件={event_count} t={self.t:.2f} "
+                    f"M={self.M:.2f}/{self.params.M_goal:.2f}({pct:.2f}%) "
+                    f"失败={self.failures} 成本={total_cost:.2f} 现役={self.active_count()} "
+                    f"等待={len(self.waiting)} 库存={self.S:.2f}",
+                    flush=True,
+                )
 
-sim = Simulator(
-    scenario_h=3,
-    tau=tau,
-    p_fail=p_fail,
-    phi=phi,
-    v_e=537000/365,          # ton/day (example)
-    lambda_down=0.01,        # 1/day (symbolic)
-    lambda_up=1/2.0,         # mean repair 2 days -> rate 0.5/day
-    I_safe=70,
-    delta=2.0,               # 2 days latency (symbolic)
-    M_goal=1e8,              # ton (example)
-    seed=1
-)
+        if verbose:
+            pct = self.M / self.params.M_goal * 100.0
+            total_cost = self.fail_loss_cost + self.replace_cost
+            print(
+                "[结束] "
+                f"t={self.t:.2f} M={self.M:.2f}/{self.params.M_goal:.2f}({pct:.2f}%) "
+                f"失败={self.failures} 成本={total_cost:.2f} 发射={self.launches} "
+                f"(损失={self.fail_loss_cost:.2f}, 替换={self.replace_cost:.2f})",
+                flush=True,
+            )
 
-# Initialize
-sim.init_elevator()
-for i in range(70):
-    sim.add_rocket(rid=i+1, init_state=2, payload=125.0)
+        return SimulationResult(
+            T_star=self.t,
+            delivered=self.M,
+            failures=self.failures,
+            launches=self.launches,
+            fail_cost=self.fail_loss_cost + self.replace_cost,
+            fail_loss_cost=self.fail_loss_cost,
+            replace_cost=self.replace_cost,
+            max_deficit=self.max_deficit,
+            completed=completed,
+            down_ratio=self.down_ratio,
+        )
 
-print(sim.run())
+
+def summarize_results(results: List[SimulationResult]) -> Dict[str, Any]:
+    times = [r.T_star for r in results if r.completed]
+    if not times:
+        return {"completed_runs": 0, "total_runs": len(results)}
+
+    mean_t = sum(times) / len(times)
+    if len(times) > 1:
+        var = sum((t - mean_t) ** 2 for t in times) / (len(times) - 1)
+        std_t = math.sqrt(var)
+    else:
+        std_t = 0.0
+    ci_half = 1.96 * std_t / math.sqrt(len(times)) if len(times) > 1 else 0.0
+
+    return {
+        "completed_runs": len(times),
+        "total_runs": len(results),
+        "mean_T": mean_t,
+        "std_T": std_t,
+        "ci95_T": (mean_t - ci_half, mean_t + ci_half),
+        "mean_failures": sum(r.failures for r in results) / len(results),
+        "mean_launches": sum(r.launches for r in results) / len(results),
+        "mean_fail_cost": sum(r.fail_cost for r in results) / len(results),
+        "mean_fail_loss_cost": sum(r.fail_loss_cost for r in results) / len(results),
+        "mean_replace_cost": sum(r.replace_cost for r in results) / len(results),
+        "max_deficit": max(r.max_deficit for r in results),
+    }
+
+
+def run_monte_carlo(
+    params: Task2Params,
+    n_runs: int,
+    verbose: bool = DEFAULT_VERBOSE,
+    log_every: int = DEFAULT_LOG_EVERY,
+    mc_log_every: int = DEFAULT_MC_LOG_EVERY,
+) -> Tuple[List[SimulationResult], Dict[str, Any]]:
+    results: List[SimulationResult] = []
+    for i in range(n_runs):
+        if mc_log_every > 0 and i % mc_log_every == 0:
+            print(f"[MC] 运行 {i + 1}/{n_runs}", flush=True)
+        sim = Task2Simulator(params, seed=params.seed + i)
+        results.append(sim.run(verbose=verbose, log_every=log_every))
+    summary = summarize_results(results)
+    return results, summary
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Task 2 reliability simulation")
+    parser.add_argument("--config", type=str, default=None, help="Path to JSON config")
+    parser.add_argument("--scenario", type=int, default=None, help="Scenario 1/2/3")
+    parser.add_argument("--n-mc", type=int, default=50, help="Monte Carlo runs")
+    parser.add_argument("--seed", type=int, default=None, help="Random seed")
+    parser.add_argument("--verbose", action="store_true", help="Enable per-event logs")
+    parser.add_argument("--log-every", type=int, default=DEFAULT_LOG_EVERY, help="Log per N events")
+    parser.add_argument("--mc-log-every", type=int, default=DEFAULT_MC_LOG_EVERY, help="Log per N MC runs")
+    args = parser.parse_args()
+
+    params = Task2Params()
+    if args.config:
+        overrides = load_config(args.config)
+        params = apply_overrides(params, overrides)
+    if args.scenario is not None:
+        params = Task2Params(**{**asdict(params), "scenario": args.scenario})
+    if args.seed is not None:
+        params = Task2Params(**{**asdict(params), "seed": args.seed})
+
+    validate_params(params)
+
+    _, summary = run_monte_carlo(
+        params,
+        n_runs=args.n_mc,
+        verbose=args.verbose,
+        log_every=args.log_every,
+        mc_log_every=args.mc_log_every,
+    )
+    print(json.dumps(summary, indent=2))
+
+
+if __name__ == "__main__":
+    main()
