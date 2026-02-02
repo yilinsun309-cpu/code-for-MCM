@@ -117,7 +117,7 @@ $M_{goal}$ & Total material mass required for the Moon Colony & ton & $10^8$ \\
 $C_{launch}$ & Cost per single Falcon Heavy launch & USD & $1.5 \times 10^7$ (aggressive full-reuse)\\
 $C_{elec\_unit}$ & Electricity cost per ton via Space Elevator & USD/ton & $7156.8^*$
 \\
-$C_{maint}$ & Annual maintenance cost for SE system & USD/yr & $1.2 \times 10^8$ \\
+$C_{maint}$ & Annual routine O\&M cost for SE system (no failure reserve, ideal conditions) & USD/yr & $1.2 \times 10^8$ \\
 $C_{TV\_fixed}$ & Annual fixed cost for Apex-to-Moon Transfer system & USD/yr & $3.0 \times
 10^8$\\
 \multicolumn{4}{l}{\textit{\textbf{Rate Constraints}}} \\
@@ -155,8 +155,6 @@ $I_{\text{safe}}$ & Safety threshold for active fleet size & rockets & From Task
 $R(t)$ & Replacement (relaunch) decision at time $t$ & rockets & Policy \\
 $\delta$ & Replacement latency (delay before replacement becomes available, days; divide by 365 when used with year-based $t$) & day & $14$ (assumed) \\
 $\Delta \tau$ & Time buffer added to absorb disruptions & day & Tuned \\
-$\eta_{\text{pack}}$ & Packing efficiency for water (net water per nominal payload) & - & $0.8\sim 1.0$ \\
-$\kappa_{\text{svc}}$ & Water handling service-time multiplier & - & $1.0\sim 1.5$ \\
 \multicolumn{4}{l}{\textit{\textbf{Failure loss (optional)}}} \\
 $c_l^{\text{loss}}$ & Cost/loss incurred if failure occurs during program $l$ & USD & TBD \\
 \bottomrule
@@ -463,6 +461,7 @@ C_{\mathrm{total}}
 + C_{maint}\cdot T
 + C_{TV\_fixed}\cdot T.
 \end{equation}
+Here $C_{maint}$ and $C_{TV\_fixed}$ denote routine annual operating costs under the \emph{ideal} (failure-free) assumption of Task~1; no failure contingency or repair reserve is included at this stage.
 
 \subsection{Closed-Form Solutions for Scenario A and Scenario B}
 
@@ -903,7 +902,7 @@ Elevator debris & $\lambda_{\text{hit,untracked}}=0.1/\text{day}$ & LEO untracke
  & $\lambda_{\text{threat,GEO/MEO}}=0.1\sim0.4/\text{yr}$ & GEO/MEO conjunction threat frequency \\
 Meteor shower & $p_{\text{cat}}=10^{-5}/\text{yr}$ & Leonids typical-peak catastrophic probability \\
  & $p_{\text{cat,max}}=1.6\times10^{-3}/\text{yr}$ & Extreme (2031-like) catastrophic placeholder \\
-Parameter knobs & $r\in(0,1)$, $\theta_1,\theta_2$, $\beta\in(0,1)$ & Derating thresholds and load-limit factors \\
+Parameter knobs & $r\in(0,1)$, $\theta_1,\theta_2$, $\beta\in(0,1)$ & Derating thresholds and load-limit factors (water-specific coefficients are used only in Task~3) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1187,7 +1186,7 @@ and perturbed over plausible ranges to quantify the robustness of annual water s
 \subsubsection{Event-Driven Discrete-Event Simulation (DES)}
 \label{sec:model2_des}
 
-We simulate the fleet evolution using a discrete-event mechanism.
+We simulate the fleet evolution using a discrete-event mechanism. \textbf{Task~2 仅处理建设期总货运与失效/替换，不包含水库存与供水环节；水相关变量只在 Task~3 引入。}
 For each rocket $r$, let $L_r(t)\in\bar{\mathcal{L}}$ denote its current program/state at time $t$,
 and let $T_r(t)\ge t$ be its scheduled completion time.
 
@@ -1286,7 +1285,7 @@ We summarize the complete DES logic:
 
 \paragraph{Initialization.}
 Set $t=0$, $t_{\text{prev}}=0$, $M(0)=0$, choose scenario $h$, initialize $I(0)$ rockets and their initial programs,
-set $S(0)=0$, choose $Cap_{SE}^{\text{eff}}$ (Scenario~1/3), and set $t_{\text{slot}}=0$.
+set $S(0)=0$, choose $Cap_{SE}^{\text{eff}}$ (Scenario~1/3), and set $t_{\text{slot}}=0$. No water inventory or demand is modeled in Task~2.
 
 \paragraph{Main loop.}
 Repeat until $M(t)\ge M_{\text{goal}}$:
@@ -1347,6 +1346,16 @@ All baseline probabilities are treated as scenario inputs; their baseline magnit
 and docking literature \cite{nasa_launch_reliability,nasa_docking,nasa_landing} and then perturbed to quantify
 sensitivity and robustness.
 
+\paragraph{Outputs exported to Task~3 (interpretation only).}
+Task~2 supplies the following aggregates for downstream water-supply analysis in Task~3:
+\begin{itemize}
+    \item $A$: effective system availability (construction logistics), derived from failures/repair in the DES.
+    \item $\Delta T_{\text{fail}}$: delay of completion time relative to ideal Task~1 baseline.
+    \item $G_{\max}$: maximum observed delivery gap (days) for bulk cargo under failure/downtime.
+    \item $C_{\text{fail}}$: incremental cost due to failures/replacements.
+\end{itemize}
+No water inventory or consumption is simulated in Task~2; Task~3 will take $(A,\Delta T_{\text{fail}},G_{\max})$ as inputs when assessing annual water supply robustness.
+
 \subsection{Model 3: Supply-Chain Buffer and Stockout-Risk Control for One-Year Water Supply}
 \label{sec:model3_optimal}
 
@@ -1397,6 +1406,8 @@ $f_{total}$ & Total Earth launch cadence $=\sum_{s\in\mathcal{S}} c_s$ & 1/yr & 
 $\delta$ & Replacement latency (Task~2) & day & 14 (baseline, scenario-tunable)\\
 $W_q$ & Queueing-induced waiting time (bottleneck) & day & estimated / simulated\\
 $G$ & Delivery drought gap (max inter-arrival or disruption gap) & day & simulated\\
+$W_{\text{gross,life}}$ & Annual gross water demand (living load) & ton/yr & $5.73\times10^{6}$\\
+$W_{\text{net,life}}$ & Annual net make-up water (living load, $r_{\text{avg}}=0.52$) & ton/yr & $2.75\times10^{6}$\\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -1450,7 +1461,8 @@ r_{\text{avg}}=\frac{0.98+0.06}{2}=0.52,
 yielding annual aggregates for the living load
 \[
 W_{\text{gross,life}}\approx 5.73\times10^{6}\ \text{ton/yr},\qquad
-W_{\text{net,life}}\approx 2.75\times10^{6}\ \text{ton/yr}.
+W_{\text{net,life}}\approx 2.75\times10^{6}\ \text{ton/yr},
+with a per-day net rate $c=W_{\text{net,life}}/365\approx 7.54$ ton/day.
 \]
 These serve as Task~3 baseline values; sensitivity runs may raise $r$ (e.g., $0.7\!-\!0.9$) for technology-improvement scenarios.
 
@@ -1521,7 +1533,7 @@ where $\Delta t_{\text{queue}}$ is a representative queue-induced delay (launch-
 These analytical expressions provide \emph{search bounds} and \emph{engineering interpretation}, while final feasibility
 is evaluated by simulation.
 
-\subsubsection{Coupling from Task 2: Water Payload and Service-Time Inflation}
+\subsubsection{Coupling from Task 2: Water Payload and Service-Time Inflation (for Task~3)}
 \label{sec:model3_coupling_opt}
 
 Water logistics may require pressurized containment, leak checking, sterility control, and thermal management.
@@ -1536,26 +1548,17 @@ with $\eta_{\text{pack}}\in[0.8,1]$ and $\kappa_{\text{svc}}\in[1,1.5]$.
 
 \subsubsection{DES Evaluation: Minimal Extension of Task 2}
 \label{sec:model3_des_opt}
-
-We inherit the event-driven DES of Task~2 (Section~\ref{sec:model2_des_routine}) and add a single inventory state $W(t)$:
-
+We do \emph{not} rebuild a new DES for water. Instead, we reuse Task~2 outputs:
 \begin{itemize}
-\item \textbf{Time-advance update:} when the global clock advances $t_{\text{prev}}\to t$,
-\[
-W\leftarrow W-c\,(t-t_{\text{prev}}).
-\]
-If $W<0$, stockout occurs and the plan is infeasible.
-
-\item \textbf{Arrival update:} whenever a water delivery arrives (Program~3 completion for water),
-\[
-W\leftarrow W+q_{\text{water}}.
-\]
-
-\item \textbf{All other mechanisms unchanged:} absorbing failures, replacement latency $\delta$, launch-slot cadence,
-and Apex inventory coupling for elevator-supported departures.
+    \item $A$ (availability) scales all Task~1 throughputs: $Cap_{SE}^{\text{eff}}=A\,Cap_{SE}$, $f_{cycle}^{\text{eff}}=A\,f_{cycle}$, $f_{total}^{\text{eff}}=A\,f_{total}$.
+    \item $G_{\max}$ (max observed delivery gap for bulk cargo) upper-bounds the water drought gap.
+    \item $W_q$ (queueing wait) and $\delta$ (replacement latency) provide the characteristic delay budget.
 \end{itemize}
-
-The DES outputs the realized delivery gaps, queueing delays, and the minimum inventory $\min_{t\in[0,d]}W(t)$.
+Inventory feasibility is then checked analytically with the gap bound:
+\[
+S_{\text{moon}}\ \ge\ c\cdot \max\{G_{\max},\, W_q+\delta\},
+\]
+and arrivals are assumed to follow the effective cadence set by $(Cap_{SE}^{\text{eff}},\,f_{cycle}^{\text{eff}},\,f_{total}^{\text{eff}})$. If $S_{\text{moon}}$ satisfies the bound, stockout probability over the first year is negligible; otherwise sensitivity is reported. This keeps Task~3 application-focused and avoids duplicating the Task~2 DES.
 
 \subsubsection{Recovery-Rate Degradation and Edge-Failure Testing}
 \label{sec:model3_recovery_opt}
@@ -1582,13 +1585,7 @@ Hence the minimal safety stock at confidence level $\alpha$ is
 \begin{equation}
 S_{\text{moon}}^{*}=c\cdot Q_{\alpha}(G),
 \end{equation}
-where $Q_{\alpha}(G)$ is the $\alpha$-quantile of $G$ estimated from Monte Carlo DES trajectories.
-This provides a direct policy interpretation: \emph{Task~3's additional cost is the price of buffering against
-rare but severe supply interruptions.} In practice we compute $S_{\text{moon}}^{*}$ by an outer one-dimensional search
-that calls the DES repeatedly: start from a lower bound $S_{\min}=c\cdot(\delta+W_q)$ and an upper bound
-$S_{\max}$ large enough to make stockout impossible in pilot runs, and apply binary search (or a coarse grid search)
-on $S_{\text{moon}}$ until the empirical $\alpha$-quantile constraint is met within tolerance; the same loop yields
-$Q_{\alpha}(G)$ as a by-product.
+where $Q_{\alpha}(G)$ can be conservatively upper-bounded by $\max\{G_{\max},\,W_q+\delta\}$ from Task~2 outputs; thus a closed-form sufficient buffer is $S_{\text{moon}}^{*}\!=\!c\cdot\max\{G_{\max},\,W_q+\delta\}$. If finer estimates are needed, one may reuse Task~2 event logs to empirically compute $Q_{\alpha}(G)$ without rebuilding a new DES.
 
 \subsubsection{Cost Accounting and Scenario-Specific Elevator Water Mass}
 \label{sec:model3_cost_opt}
