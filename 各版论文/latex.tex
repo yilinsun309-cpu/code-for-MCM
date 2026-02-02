@@ -124,8 +124,8 @@ $C_{TV\_fixed}$ & Fixed cost for Apex-to-Moon Transfer system & USD/yr & $3.0 \t
 $Cap_{SE}$ & Annual capacity of the Space Elevator system & ton/yr & $5.37 \times
 10^5$ \\
 $Cap_{Rock}$ & Payload capacity of a single rocket launch & ton & 125 \\
-$f_{total}$ & Max. annual Earth launch frequency (all sites combined) & launches/yr 
-& Data-driven \\
+$f_{total}$ & Sum of site cadences $f_{total}=\sum_{s\in\mathcal{S}} c_s$ & launches/yr 
+& From site-level forecasts \\
 $f_{cycle}$ & Max. round-trips per rocket per year (apex-to-Moon) & cycles/yr & $
 \approx 60^\dagger$ \\
 \bottomrule
@@ -317,9 +317,14 @@ M_{SE} \le Cap_{SE}\cdot T.
 \end{equation}
 
 \subsubsection{Rocket Launch Frequency Constraint (Earth-based)}
-Given the maximum annual launch frequency across all Earth launch sites,
+Let $N_{Rock}=\sum_{s\in\mathcal{S}} N_s$, where $N_s$ is the number of launches assigned to site $s$ over horizon $T$.
+Each site is capped by its forecast cadence:
 \begin{equation}
-N_{Rock} \le f_{total}\cdot T.
+N_s \le \lambda_s^{\text{max}}\cdot T,\quad \forall s\in\mathcal{S},
+\end{equation}
+and the effective fleet-wide cadence is the sum
+\begin{equation}
+f_{total}=\sum_{s\in\mathcal{S}} c_s=\sum_{s\in\mathcal{S}} \frac{N_s}{T}.
 \end{equation}
 
 \subsubsection{Orbital Rocket Fleet Throughput (Apex-to-Moon Cycling)}
@@ -380,9 +385,9 @@ I_{\text{safe}}^{(A)}
 \end{equation}
 
 For the Earth-launched cycling (Scenario B), the system throughput is limited by the
-maximum annual launch cadence. A natural target is the \emph{maximum achievable} delivery rate:
+aggregate cadence $f_{total}=\sum_{s\in\mathcal{S}} c_s$ after site-wise caps. A natural target is the \emph{maximum achievable} delivery rate:
 \begin{equation}
-R_{\text{target}}^{(B)} = f_{total}\,Cap_{Rock}.
+R_{\text{target}}^{(B)} = \left(\sum_{s\in\mathcal{S}} c_s\right) Cap_{Rock}.
 \end{equation}
 One full Earth-based loop is $(2)\rightarrow(3)\rightarrow(5)\rightarrow(2)$, hence
 \begin{equation}
@@ -392,7 +397,7 @@ T_{\text{cycle}}^{(B)} \approx \tau_2+\tau_3+\tau_5,
 I_{\text{safe}}^{(B)}
 =
 \left\lceil
-f_{total}\,(\tau_2+\tau_3+\tau_5)
+\bigl(\sum_{s\in\mathcal{S}} c_s\bigr)\,(\tau_2+\tau_3+\tau_5)
 \right\rceil .
 \end{equation}
 
@@ -485,10 +490,9 @@ T_{\text{elev}}^{(A)} = \frac{M_{goal}}{Cap_{SE}}.
 \end{equation}
 
 However, Scenario A also requires an initial deployment phase in which rockets are
-launched \emph{empty} from Earth to the apex anchor. Given the maximum annual launch
-frequency $f_{total}$, deploying $N_{Rock}$ rockets requires at least
+launched \emph{empty} from Earth to the apex anchor. Respecting site caps $N_s\le\lambda_s^{\text{max}}T$ and $N_{Rock}=\sum_s N_s$, the aggregate cadence is $f_{total}=\sum_s c_s$ with $c_s=N_s/T$, so deploying $N_{Rock}$ rockets requires at least
 \begin{equation}
-T_{\text{deploy}}^{(A)}=\frac{N_{Rock}}{f_{total}}.
+T_{\text{deploy}}^{(A)}=\frac{N_{Rock}}{\sum_{s\in\mathcal{S}} c_s}.
 \end{equation}
 
 Therefore, the total project duration in Scenario A is approximated by the slower
@@ -554,15 +558,15 @@ N_{Rock,B}^{*}=
 \right\rceil.
 \end{equation}
 
-Given the maximum annual launch frequency $f_{total}$ (all sites combined), the
-launch-count constraint is
+Using site-resolved cadence, we impose
 \begin{equation}
-N_{Rock} \le f_{total}\cdot T.
+N_{Rock} = \sum_{s\in\mathcal{S}} N_s,\qquad N_s \le \lambda_s^{\text{max}}\,T,\ \forall s\in\mathcal{S},
 \end{equation}
+so the aggregate effective cadence is $f_{total}=\sum_s c_s$ with $c_s=N_s/T$.
 Hence, the minimum feasible completion time is obtained by saturating the launch
 rate:
 \begin{equation}
-T_B^{*}=\frac{N_{Rock,B}^{*}}{f_{total}}.
+T_B^{*}=\frac{N_{Rock,B}^{*}}{\sum_{s\in\mathcal{S}} c_s}.
 \end{equation}
 
 The corresponding total cost under Scenario B is
@@ -634,9 +638,9 @@ T_{\text{remain}}(N_{Rock}) =
 \end{equation}
 
 In addition, deploying $N_{Rock}$ rockets from Earth is limited by the maximum
-annual launch frequency $f_{total}$, resulting in a deployment time of
+aggregate cadence $f_{total}=\sum_s c_s$ (subject to $N_s\le\lambda_s^{\text{max}}T$ per site), resulting in a deployment time of
 \begin{equation}
-T_{\text{deploy}}(N_{Rock}) = \frac{N_{Rock}}{f_{total}}.
+T_{\text{deploy}}(N_{Rock}) = \frac{N_{Rock}}{\sum_{s\in\mathcal{S}} c_s}.
 \end{equation}
 
 The total project duration is approximated as
@@ -1241,14 +1245,14 @@ We issue replacement orders whenever $I(t)<I_{\text{safe}}^{(h)}$:
 D(t)=\big(I_{\text{safe}}^{(h)}-I(t)\big)_+.
 \]
 Each replacement order becomes ready after a latency $\delta$, but the actual insertion of new rockets is
-constrained by the maximum annual launch cadence $f_{total}$.
+constrained by the aggregate cadence $f_{total}=\sum_s c_s$ (with $c_s\le\lambda_s^{\text{max}}$ per site).
 
 \paragraph{Launch-slot server (cadence constraint).}
 Let $t_{\text{slot}}$ be the next available launch-slot time (initialized $t_{\text{slot}}=0$).
 When a replacement order becomes ready at time $t_{\text{ready}}=t+\delta$, its actual launch start time is
 \[
 t_{\text{start}}=\max\{t_{\text{ready}},\ t_{\text{slot}}\},\qquad
-t_{\text{slot}} \leftarrow t_{\text{start}}+\frac{1}{f_{total}}.
+t_{\text{slot}} \leftarrow t_{\text{start}}+\frac{1}{\sum_{s\in\mathcal{S}} c_s}.
 \]
 
 \paragraph{Scenario-dependent insertion state.}
@@ -1383,7 +1387,7 @@ $S_{\text{moon}}$ & Safety stock (initial Moon inventory) & ton & decision\\
 $q_{\text{water}}$ & Net water per successful delivery arrival & ton & $\eta_{\text{pack}}Cap_{Rock}$\\
 $\eta_{\text{pack}}$ & Water packing efficiency (Task~2 coupling) & -- & $0.8\sim 1$\\
 $\kappa_{\text{svc}}$ & Water service-time multiplier (Task~2 coupling) & -- & $1\sim 1.5$\\
-$f_{total}$ & Total Earth launch cadence limit & 1/yr & data-driven\\
+$f_{total}$ & Total Earth launch cadence $=\sum_{s\in\mathcal{S}} c_s$ & 1/yr & from site caps $c_s\le\lambda_s^{\text{max}}$\\
 $\delta$ & Replacement latency (Task~2) & day & TBD\\
 $W_q$ & Queueing-induced waiting time (bottleneck) & day & estimated / simulated\\
 $G$ & Delivery drought gap (max inter-arrival or disruption gap) & day & simulated\\
