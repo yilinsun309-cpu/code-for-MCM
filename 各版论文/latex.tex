@@ -1,0 +1,135 @@
+\documentclass[12pt]{article}
+\usepackage[UTF8]{ctex}        % 兼容中英混排
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{amsmath, amssymb}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{caption}
+\geometry{a4paper, margin=1in}
+\setlength{\parskip}{0.6em}
+\setlength{\parindent}{2em}
+\captionsetup{font=small}
+
+\title{\textbf{月球殖民运输方案的多情景建模与可靠性分析}\\[0.3em]MCM/ICM Problem B 2026}
+\author{Team \#2609427}
+\date{2026 年 2 月 2 日}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+本文围绕月球 10 万人基地建设与补给的运输方案，对纯太空电梯、纯火箭以及混合方案进行定量评估。我们首先基于运载质量、发射频率与容量等约束构建质量与成本模型，并给出纯电梯与纯火箭的封闭解；随后通过加权多目标优化确定混合方案的最优运载比例。在此基础上，提出非理想工况下的可靠性模型，采用吸收马尔可夫链与离散事件仿真（DES）描述火箭失效、库存耦合与替换延迟。模型输出涵盖完成时间、累计算质、燃料成本与失效率等指标，可为 MCM 决策提供时间–成本–风险三维权衡。关键词：太空电梯；月球基地；运输优化；马尔可夫链；蒙特卡洛。
+\end{abstract}
+
+\tableofcontents
+
+\section{Introduction}
+\subsection{Problem Background}
+人类扩展带来资源枯竭与环境压力，月球因邻近与深空门户地位成为首选据点。计划在 2050 年前建成 10 万人基地，材料需求约 $10^8$ 吨，需持续供水。地面传统火箭（年运力约 7.8 万吨）将耗时数千年；假设电梯单港年运力 17.9 万吨，三港协同可达 53.7 万吨，可大幅缩短周期并减少燃耗与污染。然而，缆索维护、系统失效与在轨交付的不确定性仍是主要风险。
+
+\subsection{Problem Restatement}
+本研究旨在：\begin{itemize}[leftmargin=2em]
+  \item 建立覆盖纯电梯、纯火箭与混合方案的成本–时间评估模型，满足大规模建设与长期补给需求；
+  \item 将部件失效、发射中断等不确定性纳入，评估对整体进度与成本的影响；
+  \item 通过敏感性分析识别关键参数（载荷能力、运输速率、失效概率、环境影响），检验方案稳健性。
+\end{itemize}
+
+\subsection{Our Work}
+\begin{enumerate}[leftmargin=2em]
+  \item 建立任务 1 的质量需求与容量约束模型，推导纯电梯与纯火箭的封闭解；
+  \item 设计混合运输的决策变量与加权多目标优化框架；
+  \item 构建任务 2 的可靠性模型：吸收马尔可夫链描述火箭失效，库存耦合与替换策略通过 DES 评估；
+  \item 输出时间、成本、交付批次、失效率等指标，形成情景对比表。
+\end{enumerate}
+
+\section{Preparation of the Models}
+\subsection{Assumptions}
+\begin{itemize}[leftmargin=2em]
+  \item 电梯与火箭运力、周期、失效率在基线内保持稳定；重大故障按马尔可夫链转移。
+  \item 月球端接收能力充足，不形成瓶颈；在轨补给延迟可忽略。
+  \item 燃料成本与发射成本按单位质量线性估计，用于相对比较而非绝对价格。
+\end{itemize}
+
+\subsection{Notation}
+常用符号示例：$M$（需求质量）、$C_e$（电梯年容量）、$C_r$（火箭单次载荷）、$p_f$（失效概率）、$T$（总工期）、$K$（燃料/发射成本因子）。
+
+\subsection{Data Preparation}
+参考给定运力（电梯 17.9 万吨/港$\cdot$年、火箭年 7.8 万吨）、三港并行能力、以及基地材料总需求 $10^8$ 吨；失效率与替换时间来自任务二数据表，可按情景更新。
+
+\section{Model}
+\subsection{Model 1：运力与成本模型}
+\paragraph{Mass Requirement} 以总需求 $M$ 与年/次运力推算最短工期 $T_{\min}$，并考虑运输效率折减系数。
+\paragraph{Space Elevator Capacity Constraint} $T \ge \frac{M}{n_e C_e}$，其中 $n_e$ 为电梯端口数量。
+\paragraph{Rocket Launch Frequency Constraint} 发射频次 $f_r$ 限制火箭年运力：$C_r^{\text{year}} = f_r \cdot C_r$。
+\paragraph{Orbital Fleet Throughput} 顶端–月球循环火箭队列以周转时间确定在轨吞吐。
+\paragraph{Fleet Sizing \& Safety Threshold} 设置安全冗余 $I_{\text{safe}}$，保证交付连续性。
+\paragraph{Scenario-Specific Delivered Mass} 给出纯电梯、纯火箭与混合方案的交付量表达式。
+\paragraph{Cost Model} 成本由燃料、维护、延迟罚金等加权组成，用于优化或报告。
+
+\subsection{Closed-Form Solutions}
+\subsubsection{Scenario A: Pure Space Elevator}
+当 $n_e=3$ 时，工期约为 $T_A = \dfrac{M}{3C_e}$；成本主要为维护与电能，忽略燃料。
+\subsubsection{Scenario B: Pure Rocket}
+工期 $T_B = \dfrac{M}{f_r C_r}$，成本随发射次数线性上升；环境影响最大。
+
+\subsection{Hybrid Transportation Optimization}
+\paragraph{Decision Variable} 设 $\alpha$ 为电梯分摊比例，则火箭承担 $(1-\alpha)M$。
+\paragraph{Effective Rate \& Duration} $T(\alpha)=\max\!\Big(\dfrac{\alpha M}{3C_e},\,\dfrac{(1-\alpha)M}{f_r C_r}\Big)$。
+\paragraph{Cost Model} $J(\alpha)=w_t T(\alpha)+w_c C(\alpha)+w_e E(\alpha)$。
+\paragraph{Optimization} $\min_{\alpha\in[0,1]} J(\alpha)$，可附约束 $\alpha_{\min}\le\alpha\le\alpha_{\max}$。
+
+\subsection{Model 2：非理想工况可靠性}
+\begin{itemize}[leftmargin=2em]
+  \item \textbf{Failure-State Definition}：火箭发射/在轨/着陆多个阶段的吸收状态与转移概率。
+  \item \textbf{Scenario Rules}：按情景设定名义交付节奏（交付批次、失败次数阈值）。
+  \item \textbf{Markov Chain}：转移矩阵 $P$ 映射至失效率、平均停机时间。
+  \item \textbf{Inventory Coupling}：电梯端库存不足触发补发；顶端/月面库存与交付节奏耦合。
+  \item \textbf{DES Routine}：事件驱动仿真，处理发射、失效、替换、库存更新，输出完成时间、失效次数、最终火箭数、扩编年数等。
+  \item \textbf{Monte Carlo}：重复试验估计均值与方差，校验稳定性。
+\end{itemize}
+
+\section{Validating the Model}
+\begin{itemize}[leftmargin=2em]
+  \item 与任务一封闭解对比：混合方案在 $\alpha^{*}$ 附近应给出时间与成本折衷。
+  \item 与仿真基准对比：DES 输出的交付时间与失效率应与手算近似一致。
+  \item 敏感性分析：对 $p_f$、$f_r$、$C_e$ 等参数微调，观察工期与成本弹性。
+\end{itemize}
+
+\section{Conclusions}
+\begin{itemize}[leftmargin=2em]
+  \item 三种方案各有侧重：纯电梯成本低但可靠性敏感，纯火箭成本高周期长，混合方案平衡二者。
+  \item 可靠性提升手段：增加备份火箭、优化库存门槛、缩短替换延迟。
+  \item 后续工作：耦合环境影响与生命周期成本、完善月面接收与建造节奏模型。
+\end{itemize}
+
+\section{Strengths and Weaknesses}
+\textbf{Strengths}：结构清晰、兼顾封闭解与仿真、考虑非理想可靠性。\par
+\textbf{Weaknesses}：参数精度受限；尚未细化月面建造约束与供应链延迟。
+
+\appendix
+\section{Appendix A: 参数与符号表}
+\begin{longtable}{p{0.25\linewidth}p{0.65\linewidth}}
+\toprule
+符号 & 含义 \\
+\midrule
+$M$ & 基地物资总需求质量 \\
+$C_e$ & 单电梯端口年运力 \\
+$C_r$ & 单次火箭载荷 \\
+$f_r$ & 火箭年发射频次 \\
+$p_f$ & 火箭单次发射失效概率 \\
+$I_{\text{safe}}$ & 安全库存门槛 \\
+\bottomrule
+\end{longtable}
+
+\section{Appendix B: 仿真流程概述}
+\begin{enumerate}[leftmargin=2em]
+  \item 初始化库存、在轨队列与火箭状态；
+  \item 逐批次模拟发射与到达，按转移矩阵判断失效；
+  \item 达到库存下限时触发补发，记录延迟；
+  \item 统计总工期、累计算质、失效次数与最终在役火箭数。
+\end{enumerate}
+
+\end{document}
