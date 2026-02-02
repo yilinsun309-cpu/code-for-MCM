@@ -1385,6 +1385,8 @@ $S_{\text{moon}}$ & Safety stock (initial Moon inventory) & ton & decision\\
 $q_{\text{water}}$ & Net water per successful delivery arrival & ton & $\eta_{\text{pack}}Cap_{Rock}$\\
 $\eta_{\text{pack}}$ & Water packing efficiency (Task~2 coupling) & -- & $0.8\sim 1$\\
 $\kappa_{\text{svc}}$ & Water service-time multiplier (Task~2 coupling) & -- & $1\sim 1.5$\\
+$w_{\text{avg}}$ & Blended per-capita gross use (ISS--Earth average) & L/(person$\cdot$day) & $157.1$\\
+$r_{\text{avg}}$ & Blended recovery rate (ISS--Earth average) & -- & $0.52$\\
 $f_{total}$ & Total Earth launch cadence $=\sum_{s\in\mathcal{S}} c_s$ & 1/yr & from site caps $c_s\le\lambda_s^{\text{max}}$\\
 $\delta$ & Replacement latency (Task~2) & day & 14 (baseline, scenario-tunable)\\
 $W_q$ & Queueing-induced waiting time (bottleneck) & day & estimated / simulated\\
@@ -1432,6 +1434,19 @@ $W_{\text{gross}}=332880~\mathrm{ton/yr}$.
 If $r=0.98$, then $W_{\text{net}}=6657.6~\mathrm{ton/yr}$ and $c=18.24~\mathrm{ton/day}$;
 if $r=0.94$, then $W_{\text{net}}=19972.8~\mathrm{ton/yr}$ and $c=54.72~\mathrm{ton/day}$.
 \end{itemize}
+
+To align with the blended demand/recovery in \texttt{water\_data.md}, we use
+\[
+w_{\text{avg}}=\frac{1\ \text{gal/day}+82\ \text{gal/day}}{2}\times 3.785\approx 157.1\ \text{L/(person\cdot day)},
+\qquad
+r_{\text{avg}}=\frac{0.98+0.06}{2}=0.52,
+\]
+yielding annual aggregates for the living load
+\[
+W_{\text{gross,life}}\approx 5.73\times10^{6}\ \text{ton/yr},\qquad
+W_{\text{net,life}}\approx 2.75\times10^{6}\ \text{ton/yr}.
+\]
+These serve as Task~3 baseline values; sensitivity runs may raise $r$ (e.g., $0.7\!-\!0.9$) for technology-improvement scenarios.
 
 \subsubsection{Core Inventory Model: Continuous Consumption + Discrete Arrivals}
 \label{sec:model3_inventory_opt}
