@@ -14,12 +14,14 @@ python 代码/question3/Q3.py --n-mc 50
 - `--n-mc`：蒙特卡洛运行次数
 - `--seed`：随机种子
 - `--S-moon`：初始安全库存（ton）
-- `--w-person`：人均日用水量（kg/day）
+- `--w-person`：人均日用水量（kg/day，默认 157.1）
 - `--A-m2`：植物舱面积（m^2）
 - `--w-agri`：农业用水强度（kg/m^2/day，默认 4.0）
 - `--w-payload`：运营/科研用水（kg/person/day）
 - `--extra-loss`：额外不可回收损失比例（0~1）
-- `--r-base`：基线回收率
+- `--elevator-delay`：太空电梯单程延迟（day，默认 14）
+- `--min-cycle-days`：单枚火箭最小运输间隔（day，默认 6）
+- `--r-base`：基线回收率（默认 0.52）
 - `--delta-r`：退化期回收率下降量
 - `--r-degrade-start` / `--r-degrade-end`：退化期起止（day）
 - `--eta-pack`：水装载效率
