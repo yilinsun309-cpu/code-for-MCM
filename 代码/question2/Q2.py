@@ -267,6 +267,12 @@ class Task2Simulator:
         self.seq += 1
         heapq.heappush(self.pq, Event(time=time, seq=self.seq, etype=etype, rid=rid))
 
+    def reserve_launch_slot(self, t_ready: float) -> float:
+        """Reserve a launch slot at/after t_ready and advance next_launch_slot."""
+        t_start = max(t_ready, self.next_launch_slot)
+        self.next_launch_slot = t_start + 1.0 / self.params.f_total
+        return t_start
+
     def active_count(self) -> int:
         return sum(1 for r in self.rocks.values() if r.state != 6)
 
@@ -330,12 +336,13 @@ class Task2Simulator:
 
     def order_replacements(self) -> None:
         deficit = max(0, self.params.I_safe - (self.active_count() + self.pending_replacements))
+        if deficit > self.max_deficit:
+            self.max_deficit = deficit
         if deficit <= 0:
             return
         for _ in range(deficit):
             t_ready = self.t + self.params.delta_replacement
-            t_start = max(t_ready, self.next_launch_slot)
-            self.next_launch_slot = t_start + 1.0 / self.params.f_total
+            t_start = self.reserve_launch_slot(t_ready)
             self.pending_replacements += 1
             self.schedule_event(t_start, "insert")
 
@@ -370,6 +377,10 @@ class Task2Simulator:
             return
 
         r.state = next_state
+        if next_state == 2:
+            t_start = self.reserve_launch_slot(self.t)
+            self.schedule_event(t_start + self.tau_robust[2], "rocket", rid=rid)
+            return
         if next_state == 3 and requires_inventory(self.params.scenario, state, next_state):
             if self.cap_eff <= 0:
                 return
