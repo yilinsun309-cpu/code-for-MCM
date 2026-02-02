@@ -128,6 +128,7 @@ $f_{total}$ & Sum of site cadences $f_{total}=\sum_{s\in\mathcal{S}} c_s$ & laun
 & From site-level forecasts \\
 $f_{cycle}$ & Max. round-trips per rocket per year (apex-to-Moon) & cycles/yr & $
 \approx 60^\dagger$ \\
+$\tau_{\text{transit}}$ & Elevator ground-to-apex one-way time & day & $\approx 14$ (100{,}000 km at 300 km/h) \\
 \multicolumn{4}{l}{\textit{\textbf{Launch-site cadence parameters}}} \\
 $\mathcal{S}$ & Set of launch sites & -- & see Table~\ref{tab:launch_forecast_interval_2050} \\
 $\lambda_s^{\text{max}}$ & Max annual cadence at site $s$ & launches/yr & from forecast \\
@@ -503,8 +504,8 @@ T_{\text{deploy}}^{(A)}=\frac{N_{Rock}}{\sum_{s\in\mathcal{S}} c_s}.
 Therefore, the total project duration in Scenario A is approximated by the slower
 process between elevator supply and rocket deployment:
 \begin{equation}
-T_A^{*}=\max\!\left(T_{\text{elev}}^{(A)},\ T_{\text{deploy}}^{(A)}\right)
-=\max\!\left(\frac{M_{goal}}{Cap_{SE}},\ \frac{N_{Rock}}{f_{total}}\right).
+T_A^{*}=\max\!\left(\tau_{\text{transit}}+T_{\text{elev}}^{(A)},\ T_{\text{deploy}}^{(A)}\right)
+=\max\!\left(\tau_{\text{transit}}+\frac{M_{goal}}{Cap_{SE}},\ \frac{N_{Rock}}{\sum_{s\in\mathcal{S}} c_s}\right).
 \end{equation}
 
 
@@ -1134,10 +1135,12 @@ trajectory-wise constant approximation for clarity.)
 
 \paragraph{Inventory evolution between events.}
 Let $t$ be the global clock and $t_{\text{prev}}$ the previous event time. Between events, inventory increases
-deterministically:
+deterministically with the elevator transit lag:
 \[
-S(t)\leftarrow S(t_{\text{prev}}) + Cap_{SE}^{\text{eff}}\cdot (t-t_{\text{prev}}).
+S(t)\leftarrow S(t_{\text{prev}}) + Cap_{SE}^{\text{eff}}\cdot \bigl((t-t_{\text{prev}})-\tau_{\text{transit}}\bigr)_+,
 \]
+where $(\cdot)_+=\max(\cdot,0)$; this enforces zero Apex inflow until the ground-to-apex travel time
+$\tau_{\text{transit}}$ (about 14 days) has elapsed.
 
 \paragraph{Loading constraint at the Apex.}
 A loaded outbound delivery (Program~3) requires at least one payload unit $q$ in inventory. When a rocket at the Apex
@@ -1146,7 +1149,7 @@ If at time $t$ we have $S(t)<q$, the earliest feasible loading time is
 \[
 t_{\text{load}} = t + \frac{q - S(t)}{Cap_{SE}^{\text{eff}}}.
 \]
-At time $t_{\text{load}}$, we deduct inventory and then execute Program~(3):
+At time $t_{\text{load}}$, we deduct inventory and then execute Program~(3). The transit lag means that ramp-up phases see a delayed inventory build; steady-state rates remain set by $Cap_{SE}^{\text{eff}}$.
 \[
 S(t_{\text{load}}^+) \leftarrow S(t_{\text{load}}) - q.
 \]
