@@ -152,6 +152,7 @@ def compute_caps(
     site_caps: Dict[str, float],
     alpha_climate: float,
     launches_per_year: float,
+    n_launch_total: float,
     launch_plan: Optional[Dict[str, float]],
     f_green: Optional[Dict[str, float]] = None,
 ) -> Tuple[Dict[str, Dict[str, float]], Dict[str, float]]:
@@ -200,7 +201,7 @@ def compute_caps(
         "launches_total": launches_per_year,
         "cap_violation": launches_per_year > total_cap if total_cap > 0 else False,
         "max_utilization": max((d["utilization"] for d in detail.values()), default=0.0),
-        "years_lower_bound_due_to_caps": (launches_per_year / total_cap) if total_cap > 0 else None,
+        "years_lower_bound_due_to_caps": (n_launch_total / total_cap) if total_cap > 0 else None,
     }
     return detail, summary
 
@@ -311,14 +312,27 @@ def main() -> None:
     if n_launch_total is None:
         n_launch_total = infer_n_launch_total(config)
 
-    # Delivered mass and elevator mass should come from DES outputs
-    if config.delivered_ton is None or config.elevator_mass_ton is None:
-        raise ValueError("Scenario C requires --delivered-ton and --elevator-mass-ton from DES outputs.")
-
-    direct_mass_ton = config.direct_mass_ton if config.direct_mass_ton is not None else 0.0
-    deliverable_ton = min(config.delivered_ton, config.total_mass_ton)
-    mass_elevator_ton = config.elevator_mass_ton
-    infeasible = deliverable_ton + 1.0e-9 < config.total_mass_ton
+    # Delivered mass handling by scenario
+    if config.scenario == "A":
+        direct_mass_ton = 0.0
+        mass_elevator_ton = min(
+            config.total_mass_ton, config.cap_se_ton_per_year * config.elevator_towers * config.project_years
+        )
+        deliverable_ton = mass_elevator_ton
+        infeasible = deliverable_ton + 1.0e-9 < config.total_mass_ton
+    elif config.scenario == "B":
+        direct_mass_ton = min(config.total_mass_ton, n_launch_total * config.cap_rock_ton)
+        mass_elevator_ton = 0.0
+        deliverable_ton = direct_mass_ton
+        infeasible = deliverable_ton + 1.0e-9 < config.total_mass_ton
+    else:
+        # Scenario C: require DES outputs
+        if config.delivered_ton is None or config.elevator_mass_ton is None:
+            raise ValueError("Scenario C requires --delivered-ton and --elevator-mass-ton from DES outputs.")
+        direct_mass_ton = config.direct_mass_ton if config.direct_mass_ton is not None else 0.0
+        deliverable_ton = min(config.delivered_ton, config.total_mass_ton)
+        mass_elevator_ton = config.elevator_mass_ton
+        infeasible = deliverable_ton + 1.0e-9 < config.total_mass_ton
     launches_per_year = n_launch_total / config.project_years
 
     rocket = compute_rocket_emissions(n_launch_total, config.bc_ei_g_per_kg)
@@ -347,6 +361,7 @@ def main() -> None:
         config.alpha_climate,
         launches_per_year,
         config.launch_plan,
+        n_launch_total,
         f_green=config.f_green,
     )
 
@@ -365,8 +380,8 @@ def main() -> None:
         "infeasible": infeasible,
         "mass_rocket_direct_ton": direct_mass_ton,
         "mass_elevator_ton": mass_elevator_ton,
-        "elevator_cap_ton": elev_cap_ton,
-        "orbit_cap_ton": orbit_cap_ton,
+        "elevator_cap_ton": None,
+        "orbit_cap_ton": None,
         "years_needed_elevator": years_needed_elevator,
         "alpha_climate": config.alpha_climate,
         "grid_intensity": config.grid_intensity,
