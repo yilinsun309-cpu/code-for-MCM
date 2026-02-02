@@ -31,6 +31,7 @@ DEFAULT_F_TOTAL = 3834.0
 DEFAULT_TAU_DAYS = {1: 3.0, 2: 3.0, 3: 3.0, 4: 3.0, 5: 3.0}
 DEFAULT_DELTA_TAU_DAYS = 0.0
 DEFAULT_P_FAIL = {1: 0.0, 2: 1.78e-2, 3: 1.0e-3, 4: 1.03e-2, 5: 0.0}
+DEFAULT_FAIL_COST = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0}
 DEFAULT_I_SAFE = 70
 DEFAULT_DELTA_REPLACEMENT_DAYS = 2.0
 DEFAULT_DOWN_RATIO = (0.0, 0.1)
@@ -59,6 +60,9 @@ class Task2Params:
     p_fail: Dict[int, float] = field(
         default_factory=lambda: DEFAULT_P_FAIL.copy()
     )
+    fail_cost: Dict[int, float] = field(
+        default_factory=lambda: DEFAULT_FAIL_COST.copy()
+    )
     I_safe: int = DEFAULT_I_SAFE
     delta_replacement: float = DEFAULT_DELTA_REPLACEMENT_DAYS / DAYS_PER_YEAR
     down_ratio: Tuple[float, float] = DEFAULT_DOWN_RATIO
@@ -73,6 +77,7 @@ class SimulationResult:
     delivered: float
     failures: int
     launches: int
+    fail_cost: float
     max_deficit: int
     completed: bool
     down_ratio: float
@@ -133,6 +138,8 @@ def apply_overrides(params: Task2Params, overrides: Dict[str, Any]) -> Task2Para
         data["tau"] = {k: v / DAYS_PER_YEAR for k, v in tau_days.items()}
     if "p_fail" in overrides:
         data["p_fail"] = _normalize_int_key_dict(overrides["p_fail"])
+    if "fail_cost" in overrides:
+        data["fail_cost"] = _normalize_int_key_dict(overrides["fail_cost"])
     if "down_ratio" in overrides:
         data["down_ratio"] = parse_down_ratio(overrides["down_ratio"])
 
@@ -153,6 +160,10 @@ def validate_params(params: Task2Params) -> None:
     for l in range(1, 6):
         if l not in params.tau:
             raise ValueError("tau missing program {}".format(l))
+        if l not in params.fail_cost:
+            raise ValueError("fail_cost missing program {}".format(l))
+        if params.fail_cost[l] < 0:
+            raise ValueError("fail_cost must be >= 0")
 
 
 def phi_for_scenario(scenario: int) -> Dict[int, int]:
@@ -190,6 +201,7 @@ class Task2Simulator:
         self.S = 0.0
         self.failures = 0
         self.launches = 0
+        self.fail_cost = 0.0
         self.max_deficit = 0
         self.pending_replacements = 0
         self.next_launch_slot = 0.0
@@ -300,6 +312,7 @@ class Task2Simulator:
         if self.rng.random() < pf:
             r.state = 6
             self.failures += 1
+            self.fail_cost += self.params.fail_cost.get(state, 0.0)
             self.order_replacements()
             self.update_deficit()
             return
@@ -373,7 +386,7 @@ class Task2Simulator:
                     "[进度] "
                     f"事件={event_count} t={self.t:.2f} "
                     f"M={self.M:.2f}/{self.params.M_goal:.2f}({pct:.2f}%) "
-                    f"失败={self.failures} 现役={self.active_count()} "
+                    f"失败={self.failures} 成本={self.fail_cost:.2f} 现役={self.active_count()} "
                     f"等待={len(self.waiting)} 库存={self.S:.2f}",
                     flush=True,
                 )
@@ -383,7 +396,7 @@ class Task2Simulator:
             print(
                 "[结束] "
                 f"t={self.t:.2f} M={self.M:.2f}/{self.params.M_goal:.2f}({pct:.2f}%) "
-                f"失败={self.failures} 发射={self.launches}",
+                f"失败={self.failures} 成本={self.fail_cost:.2f} 发射={self.launches}",
                 flush=True,
             )
 
@@ -392,6 +405,7 @@ class Task2Simulator:
             delivered=self.M,
             failures=self.failures,
             launches=self.launches,
+            fail_cost=self.fail_cost,
             max_deficit=self.max_deficit,
             completed=completed,
             down_ratio=self.down_ratio,
@@ -419,6 +433,7 @@ def summarize_results(results: List[SimulationResult]) -> Dict[str, Any]:
         "ci95_T": (mean_t - ci_half, mean_t + ci_half),
         "mean_failures": sum(r.failures for r in results) / len(results),
         "mean_launches": sum(r.launches for r in results) / len(results),
+        "mean_fail_cost": sum(r.fail_cost for r in results) / len(results),
         "max_deficit": max(r.max_deficit for r in results),
     }
 
