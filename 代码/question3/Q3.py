@@ -17,7 +17,7 @@ import json
 import math
 import random
 from collections import deque
-from typing import Any, Deque, Dict, List, Optional, Tuple
+from typing import Any, Deque, Dict, List, Optional, Tuple, Sequence
 
 INF = 1.0e30
 DAYS_PER_YEAR = 365.0
@@ -248,21 +248,6 @@ def requires_inventory(scenario: int, from_state: int, to_state: int) -> bool:
 
 def gross_per_day(params: Task3Params) -> float:
     return params.N * params.w_person / 1000.0
-
-
-def average_recovery_rate(params: Task3Params) -> float:
-    if (
-        params.delta_r <= 0
-        or params.r_degrade_start is None
-        or params.r_degrade_end is None
-    ):
-        return params.r_base
-    start = max(0.0, min(params.d_days, float(params.r_degrade_start)))
-    end = max(0.0, min(params.d_days, float(params.r_degrade_end)))
-    if end <= start:
-        return params.r_base
-    frac = (end - start) / params.d_days
-    return params.r_base - params.delta_r * frac
 
 
 def recovery_rate_at(day: float, params: Task3Params) -> float:
@@ -628,9 +613,8 @@ def summarize_results(
     params: Task3Params,
 ) -> Dict[str, Any]:
     gross_day = gross_per_day(params)
-    r_avg = average_recovery_rate(params)
     W_gross = gross_day * params.d_days
-    W_net = W_gross * (1.0 - r_avg)
+    W_net = W_gross * (1.0 - params.r_base)
     c_base = gross_day * (1.0 - params.r_base)
     min_r = max(0.0, params.r_base - params.delta_r)
     c_max = gross_day * (1.0 - min_r)
@@ -642,7 +626,7 @@ def summarize_results(
     stockout_runs = sum(1 for r in results if r.stockout)
     feasible_runs = len(results) - stockout_runs
 
-    def mean(values: List[float]) -> float:
+    def mean(values: Sequence[float]) -> float:
         return sum(values) / len(values) if values else 0.0
 
     arrivals = [r.arrivals for r in results]
@@ -655,6 +639,7 @@ def summarize_results(
     max_launch_wait = [r.max_launch_wait_days for r in results]
 
     costs: List[float] = []
+    year_scale = params.d_days / DAYS_PER_YEAR
     for r in results:
         if params.scenario == 1:
             M_se_water = W_net
@@ -662,12 +647,15 @@ def summarize_results(
             M_se_water = 0.0
         else:
             M_se_water = max(0.0, W_net - r.direct_arrivals * (params.eta_pack * params.Cap_Rock))
-        C_water = (
-            params.C_launch * r.arrivals
-            + params.C_elec_unit * M_se_water
-            + params.C_maint
-            + params.C_TV_fixed
-        )
+        if params.scenario == 2:
+            C_water = params.C_launch * r.arrivals
+        else:
+            C_water = (
+                params.C_launch * r.arrivals
+                + params.C_elec_unit * M_se_water
+                + params.C_maint * year_scale
+                + params.C_TV_fixed
+            )
         costs.append(C_water)
 
     summary = {
