@@ -29,11 +29,15 @@ DEFAULT_SCENARIO = 3
 DEFAULT_N = 100000
 DEFAULT_D_DAYS = 365.0
 DEFAULT_W_PERSON = 3.8
-DEFAULT_R_BASE = 0.98
+DEFAULT_R_BASE = 0.94
 DEFAULT_DELTA_R = 0.0
 DEFAULT_R_DEGRADE_START = None
 DEFAULT_R_DEGRADE_END = None
 DEFAULT_S_MOON = 0.0
+DEFAULT_A_M2 = 0.0
+DEFAULT_W_AGRI_PER_M2 = 4.0
+DEFAULT_W_PAYLOAD = 0.0
+DEFAULT_EXTRA_LOSS_FRAC = 0.0
 
 # Coupling to Task 2
 DEFAULT_CAP_SE = 5.37e5
@@ -76,6 +80,10 @@ class Task3Params:
     r_degrade_start: Optional[float] = DEFAULT_R_DEGRADE_START
     r_degrade_end: Optional[float] = DEFAULT_R_DEGRADE_END
     S_moon: float = DEFAULT_S_MOON
+    A_m2: float = DEFAULT_A_M2
+    w_agri_per_m2: float = DEFAULT_W_AGRI_PER_M2
+    w_payload: float = DEFAULT_W_PAYLOAD
+    extra_loss_frac: float = DEFAULT_EXTRA_LOSS_FRAC
     eta_pack: float = DEFAULT_ETA_PACK
     kappa_svc: float = DEFAULT_KAPPA_SVC
     Cap_SE: float = DEFAULT_CAP_SE
@@ -204,6 +212,14 @@ def validate_params(params: Task3Params) -> None:
         raise ValueError("r_base - delta_r must be >= 0")
     if params.S_moon < 0:
         raise ValueError("S_moon must be >= 0")
+    if params.A_m2 < 0:
+        raise ValueError("A_m2 must be >= 0")
+    if params.w_agri_per_m2 < 0:
+        raise ValueError("w_agri_per_m2 must be >= 0")
+    if params.w_payload < 0:
+        raise ValueError("w_payload must be >= 0")
+    if not (0.0 <= params.extra_loss_frac <= 1.0):
+        raise ValueError("extra_loss_frac must be within [0, 1]")
     if not (0.0 < params.eta_pack <= 1.0):
         raise ValueError("eta_pack must be within (0, 1]")
     if params.kappa_svc <= 0:
@@ -246,8 +262,16 @@ def requires_inventory(scenario: int, from_state: int, to_state: int) -> bool:
     return False
 
 
+def gross_breakdown_per_day(params: Task3Params) -> Tuple[float, float, float, float]:
+    life = params.N * params.w_person / 1000.0
+    agri = params.A_m2 * params.w_agri_per_m2 / 1000.0
+    payload = params.N * params.w_payload / 1000.0
+    total = life + agri + payload
+    return life, agri, payload, total
+
+
 def gross_per_day(params: Task3Params) -> float:
-    return params.N * params.w_person / 1000.0
+    return gross_breakdown_per_day(params)[-1]
 
 
 def recovery_rate_at(day: float, params: Task3Params) -> float:
@@ -349,22 +373,24 @@ class Task3Simulator:
             or self.params.r_degrade_start is None
             or self.params.r_degrade_end is None
         ):
-            c_day = self.gross_day * (1.0 - self.params.r_base)
+            c_day = self.gross_day * (1.0 - self.params.r_base + self.params.extra_loss_frac)
             return [(d0, d1, c_day)]
         start = max(0.0, min(self.params.d_days, float(self.params.r_degrade_start)))
         end = max(0.0, min(self.params.d_days, float(self.params.r_degrade_end)))
         if end <= start or d1 <= start or d0 >= end:
-            c_day = self.gross_day * (1.0 - self.params.r_base)
+            c_day = self.gross_day * (1.0 - self.params.r_base + self.params.extra_loss_frac)
             return [(d0, d1, c_day)]
         segments: List[Tuple[float, float, float]] = []
         if d0 < start:
-            c_day = self.gross_day * (1.0 - self.params.r_base)
+            c_day = self.gross_day * (1.0 - self.params.r_base + self.params.extra_loss_frac)
             segments.append((d0, min(d1, start), c_day))
         if d1 > start and d0 < end:
-            c_day = self.gross_day * (1.0 - (self.params.r_base - self.params.delta_r))
+            c_day = self.gross_day * (
+                1.0 - (self.params.r_base - self.params.delta_r) + self.params.extra_loss_frac
+            )
             segments.append((max(d0, start), min(d1, end), c_day))
         if d1 > end:
-            c_day = self.gross_day * (1.0 - self.params.r_base)
+            c_day = self.gross_day * (1.0 - self.params.r_base + self.params.extra_loss_frac)
             segments.append((max(d0, end), d1, c_day))
         return segments
 
@@ -612,12 +638,12 @@ def summarize_results(
     results: List[SimulationResult],
     params: Task3Params,
 ) -> Dict[str, Any]:
-    gross_day = gross_per_day(params)
+    life_day, agri_day, payload_day, gross_day = gross_breakdown_per_day(params)
     W_gross = gross_day * params.d_days
-    W_net = W_gross * (1.0 - params.r_base)
-    c_base = gross_day * (1.0 - params.r_base)
+    W_net = W_gross * (1.0 - params.r_base + params.extra_loss_frac)
+    c_base = gross_day * (1.0 - params.r_base + params.extra_loss_frac)
     min_r = max(0.0, params.r_base - params.delta_r)
-    c_max = gross_day * (1.0 - min_r)
+    c_max = gross_day * (1.0 - min_r + params.extra_loss_frac)
 
     max_gaps = [r.max_gap_days for r in results]
     gap_q = quantile(max_gaps, params.alpha)
@@ -662,6 +688,9 @@ def summarize_results(
         "runs": len(results),
         "feasible_runs": feasible_runs,
         "stockout_runs": stockout_runs,
+        "W_gross_life_ton": life_day * params.d_days,
+        "W_gross_agri_ton": agri_day * params.d_days,
+        "W_gross_payload_ton": payload_day * params.d_days,
         "W_gross_ton": W_gross,
         "W_net_ton": W_net,
         "c_base_ton_per_day": c_base,
@@ -709,6 +738,10 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
     parser.add_argument("--S-moon", type=float, default=None, help="Initial safety stock (ton)")
     parser.add_argument("--w-person", type=float, default=None, help="Per-capita gross water use (kg/day)")
+    parser.add_argument("--A-m2", type=float, default=None, help="Plant growth area (m^2)")
+    parser.add_argument("--w-agri", type=float, default=None, help="Agriculture water use (kg/m^2/day)")
+    parser.add_argument("--w-payload", type=float, default=None, help="Payload/ops water (kg/person/day)")
+    parser.add_argument("--extra-loss", type=float, default=None, help="Extra loss fraction beyond recovery")
     parser.add_argument("--r-base", type=float, default=None, help="Baseline recovery rate")
     parser.add_argument("--delta-r", type=float, default=None, help="Recovery drop during degradation")
     parser.add_argument("--r-degrade-start", type=float, default=None, help="Degradation start day")
@@ -734,6 +767,14 @@ def main() -> None:
         data["S_moon"] = args.S_moon
     if args.w_person is not None:
         data["w_person"] = args.w_person
+    if args.A_m2 is not None:
+        data["A_m2"] = args.A_m2
+    if args.w_agri is not None:
+        data["w_agri_per_m2"] = args.w_agri
+    if args.w_payload is not None:
+        data["w_payload"] = args.w_payload
+    if args.extra_loss is not None:
+        data["extra_loss_frac"] = args.extra_loss
     if args.r_base is not None:
         data["r_base"] = args.r_base
     if args.delta_r is not None:
