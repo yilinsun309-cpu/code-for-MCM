@@ -31,6 +31,7 @@ python 代码/question2/Q2.py --n-mc 50
 - `DEFAULT_DELTA_TAU_DAYS`：鲁棒缓冲（天）
 - `DEFAULT_P_FAIL`：程序 1~5 的吸收态失败概率
 - `DEFAULT_FAIL_COST`：程序 1~5 的单次失败成本（单位自定）
+- `DEFAULT_C_LAUNCH`：单次替换发射成本（单位自定）
 - `DEFAULT_I_SAFE`：安全机队规模
 - `DEFAULT_DELTA_REPLACEMENT_DAYS`：替换延迟（天）
 - `DEFAULT_DOWN_RATIO`：电梯可用率折减区间（如 `(0.0, 0.1)`）
@@ -50,6 +51,8 @@ python 代码/question2/Q2.py --n-mc 50
 - `mean_failures`：平均失效次数
 - `mean_launches`：平均替换发射次数
 - `mean_fail_cost`：平均失败成本
+- `mean_fail_loss_cost`：平均失败损失成本（按程序）
+- `mean_replace_cost`：平均替换发射成本
 - `max_deficit`：最大机队缺口
 
 若全部样本未完成，会提示 `completed_runs = 0`。

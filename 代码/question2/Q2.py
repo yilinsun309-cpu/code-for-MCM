@@ -32,6 +32,7 @@ DEFAULT_TAU_DAYS = {1: 3.0, 2: 3.0, 3: 3.0, 4: 3.0, 5: 3.0}
 DEFAULT_DELTA_TAU_DAYS = 0.0
 DEFAULT_P_FAIL = {1: 0.0, 2: 1.78e-2, 3: 1.0e-3, 4: 1.03e-2, 5: 0.0}
 DEFAULT_FAIL_COST = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0}
+DEFAULT_C_LAUNCH = 1.5e7
 DEFAULT_I_SAFE = 70
 DEFAULT_DELTA_REPLACEMENT_DAYS = 2.0
 DEFAULT_DOWN_RATIO = (0.0, 0.1)
@@ -63,6 +64,7 @@ class Task2Params:
     fail_cost: Dict[int, float] = field(
         default_factory=lambda: DEFAULT_FAIL_COST.copy()
     )
+    C_launch: float = DEFAULT_C_LAUNCH
     I_safe: int = DEFAULT_I_SAFE
     delta_replacement: float = DEFAULT_DELTA_REPLACEMENT_DAYS / DAYS_PER_YEAR
     down_ratio: Tuple[float, float] = DEFAULT_DOWN_RATIO
@@ -78,6 +80,8 @@ class SimulationResult:
     failures: int
     launches: int
     fail_cost: float
+    fail_loss_cost: float
+    replace_cost: float
     max_deficit: int
     completed: bool
     down_ratio: float
@@ -157,6 +161,8 @@ def validate_params(params: Task2Params) -> None:
         raise ValueError("f_total must be > 0")
     if params.I_safe < 0:
         raise ValueError("I_safe must be >= 0")
+    if params.C_launch < 0:
+        raise ValueError("C_launch must be >= 0")
     for l in range(1, 6):
         if l not in params.tau:
             raise ValueError("tau missing program {}".format(l))
@@ -201,7 +207,8 @@ class Task2Simulator:
         self.S = 0.0
         self.failures = 0
         self.launches = 0
-        self.fail_cost = 0.0
+        self.fail_loss_cost = 0.0
+        self.replace_cost = 0.0
         self.max_deficit = 0
         self.pending_replacements = 0
         self.next_launch_slot = 0.0
@@ -297,6 +304,7 @@ class Task2Simulator:
         self.pending_replacements = max(0, self.pending_replacements - 1)
         self.add_rocket(self.start_state)
         self.launches += 1
+        self.replace_cost += self.params.C_launch
         self.update_deficit()
 
     def handle_rocket_event(self, rid: int) -> None:
@@ -312,7 +320,7 @@ class Task2Simulator:
         if self.rng.random() < pf:
             r.state = 6
             self.failures += 1
-            self.fail_cost += self.params.fail_cost.get(state, 0.0)
+            self.fail_loss_cost += self.params.fail_cost.get(state, 0.0)
             self.order_replacements()
             self.update_deficit()
             return
@@ -382,21 +390,24 @@ class Task2Simulator:
 
             if verbose and log_every > 0 and event_count % log_every == 0:
                 pct = self.M / self.params.M_goal * 100.0
+                total_cost = self.fail_loss_cost + self.replace_cost
                 print(
                     "[进度] "
                     f"事件={event_count} t={self.t:.2f} "
                     f"M={self.M:.2f}/{self.params.M_goal:.2f}({pct:.2f}%) "
-                    f"失败={self.failures} 成本={self.fail_cost:.2f} 现役={self.active_count()} "
+                    f"失败={self.failures} 成本={total_cost:.2f} 现役={self.active_count()} "
                     f"等待={len(self.waiting)} 库存={self.S:.2f}",
                     flush=True,
                 )
 
         if verbose:
             pct = self.M / self.params.M_goal * 100.0
+            total_cost = self.fail_loss_cost + self.replace_cost
             print(
                 "[结束] "
                 f"t={self.t:.2f} M={self.M:.2f}/{self.params.M_goal:.2f}({pct:.2f}%) "
-                f"失败={self.failures} 成本={self.fail_cost:.2f} 发射={self.launches}",
+                f"失败={self.failures} 成本={total_cost:.2f} 发射={self.launches} "
+                f"(损失={self.fail_loss_cost:.2f}, 替换={self.replace_cost:.2f})",
                 flush=True,
             )
 
@@ -405,7 +416,9 @@ class Task2Simulator:
             delivered=self.M,
             failures=self.failures,
             launches=self.launches,
-            fail_cost=self.fail_cost,
+            fail_cost=self.fail_loss_cost + self.replace_cost,
+            fail_loss_cost=self.fail_loss_cost,
+            replace_cost=self.replace_cost,
             max_deficit=self.max_deficit,
             completed=completed,
             down_ratio=self.down_ratio,
@@ -434,6 +447,8 @@ def summarize_results(results: List[SimulationResult]) -> Dict[str, Any]:
         "mean_failures": sum(r.failures for r in results) / len(results),
         "mean_launches": sum(r.launches for r in results) / len(results),
         "mean_fail_cost": sum(r.fail_cost for r in results) / len(results),
+        "mean_fail_loss_cost": sum(r.fail_loss_cost for r in results) / len(results),
+        "mean_replace_cost": sum(r.replace_cost for r in results) / len(results),
         "max_deficit": max(r.max_deficit for r in results),
     }
 
