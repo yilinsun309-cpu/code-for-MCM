@@ -16,6 +16,7 @@ python 代码/question4/Q4.py
 - `--total-mass`：总运量（ton）
 - `--cap-rock`：单次发射有效载荷（ton）
 - `--cap-se`：电梯年运力（ton/yr）
+- `--elevator-towers`：电梯塔数量（默认 1）
 - `--f-cycle`：轨道火箭年循环次数（cycles/yr）
 - `--n-launch`：地面发射总次数（不填则按情景自动估算）
 - `--project-years`：项目年限（用于把总发射数换成“年均”）

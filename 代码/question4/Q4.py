@@ -13,6 +13,7 @@ from typing import Any, Dict, Optional, Tuple
 M_GOAL_TON = 1.0e8
 CAP_ROCK_TON = 125.0
 CAP_SE_TON_PER_YEAR = 179_000.0
+ELEVATOR_TOWERS = 1.0
 F_CYCLE_PER_YEAR = 60.0
 
 RP1_TON_PER_LAUNCH = 395.5
@@ -61,6 +62,7 @@ class Task4Config:
     total_mass_ton: float
     cap_rock_ton: float
     cap_se_ton_per_year: float
+    elevator_towers: float
     f_cycle_per_year: float
     n_launch_total: Optional[int]
     project_years: float
@@ -188,6 +190,7 @@ def build_config(args: argparse.Namespace) -> Task4Config:
     scenario = normalize_scenario(args.scenario)
     cap_rock = args.cap_rock if args.cap_rock is not None else CAP_ROCK_TON
     cap_se = args.cap_se if args.cap_se is not None else CAP_SE_TON_PER_YEAR
+    towers = args.elevator_towers if args.elevator_towers is not None else ELEVATOR_TOWERS
     f_cycle = args.f_cycle if args.f_cycle is not None else F_CYCLE_PER_YEAR
 
     if args.alpha_climate in ALPHA_CLIMATE_PRESETS:
@@ -213,6 +216,7 @@ def build_config(args: argparse.Namespace) -> Task4Config:
         total_mass_ton=args.total_mass if args.total_mass is not None else M_GOAL_TON,
         cap_rock_ton=cap_rock,
         cap_se_ton_per_year=cap_se,
+        elevator_towers=towers,
         f_cycle_per_year=f_cycle,
         n_launch_total=args.n_launch,
         project_years=args.project_years,
@@ -232,6 +236,8 @@ def validate_config(config: Task4Config) -> None:
         raise ValueError("cap_rock must be > 0")
     if config.cap_se_ton_per_year <= 0:
         raise ValueError("cap_se must be > 0")
+    if config.elevator_towers <= 0:
+        raise ValueError("elevator_towers must be > 0")
     if config.f_cycle_per_year <= 0:
         raise ValueError("f_cycle must be > 0")
     if config.project_years <= 0:
@@ -250,6 +256,7 @@ def main() -> None:
     parser.add_argument("--total-mass", type=float, default=None, help="Total mass to deliver (ton)")
     parser.add_argument("--cap-rock", type=float, default=None, help="Payload per launch (ton)")
     parser.add_argument("--cap-se", type=float, default=None, help="Elevator annual capacity (ton/yr)")
+    parser.add_argument("--elevator-towers", type=float, default=None, help="Number of elevator towers")
     parser.add_argument("--f-cycle", type=float, default=None, help="Cycles per year for orbital rockets")
     parser.add_argument("--n-launch", type=int, default=None, help="Total Earth launches")
     parser.add_argument("--project-years", type=float, default=1.0, help="Project duration (years)")
@@ -280,11 +287,18 @@ def main() -> None:
             config.total_mass_ton, n_launch_total * config.cap_rock_ton
         )
 
-    elev_cap_ton = 0.0
-    orbit_cap_ton = 0.0
+    elev_cap_ton = None
+    orbit_cap_ton = None
     deliverable_elevator_ton = 0.0
-    if config.scenario in ("A", "C"):
-        elev_cap_ton = config.cap_se_ton_per_year * config.project_years
+    if config.scenario == "A":
+        elev_cap_ton = (
+            config.cap_se_ton_per_year * config.project_years * config.elevator_towers
+        )
+        deliverable_elevator_ton = min(config.total_mass_ton, elev_cap_ton)
+    elif config.scenario == "C":
+        elev_cap_ton = (
+            config.cap_se_ton_per_year * config.project_years * config.elevator_towers
+        )
         orbit_cap_ton = (
             n_launch_total
             * config.f_cycle_per_year
@@ -318,8 +332,9 @@ def main() -> None:
         ci = None
 
     years_needed_elevator = None
-    if config.cap_se_ton_per_year > 0:
-        years_needed_elevator = config.total_mass_ton / config.cap_se_ton_per_year
+    cap_per_year = config.cap_se_ton_per_year * config.elevator_towers
+    if cap_per_year > 0:
+        years_needed_elevator = config.total_mass_ton / cap_per_year
 
     caps_detail, caps_summary = compute_caps(
         config.site_caps,
@@ -333,6 +348,7 @@ def main() -> None:
         "total_mass_ton": config.total_mass_ton,
         "cap_rock_ton": config.cap_rock_ton,
         "cap_se_ton_per_year": config.cap_se_ton_per_year,
+        "elevator_towers": config.elevator_towers,
         "f_cycle_per_year": config.f_cycle_per_year,
         "project_years": config.project_years,
         "n_launch_total": n_launch_total,
