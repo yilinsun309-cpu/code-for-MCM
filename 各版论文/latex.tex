@@ -96,6 +96,14 @@ Communicate the results through a policy-oriented recommendation, summarizing mo
 
 \section{Preparation of the Models}
 \subsection{Assumptions}
+\paragraph{Parameter provenance (what is literature, what is assumed).}
+To keep the model透明可复现，我们在此明确：\\[-0.4em]
+\begin{itemize}
+    \item \textbf{文献支撑的输入}（可查公开报告/标准）：ISS 与 BVAD 的人均用水与回收率区间；NASA/ESAS/Futron 的发射与对接失效率量级；NASA/CP-2000-210429 的电梯能耗（14.8 kWh/kg）；IPCC/FAA 的燃料碳排因子；ISEC 的碎片撞击频率量级。
+    \item \textbf{情景假设/自定参数}（需在敏感性中检验）：安全库存 $S_{\text{moon}}$、替换延迟 $\delta$、排队等待 $W_q$、最大缺口 $G_{\max}$；“混合基线”用水（$157.1$ L/(人·d)，$r=0.52$）；电梯可用度 $A$ 与塔数、2050 极端发射产能 $\lambda_s^{\max}$；年度维护/固定成本、学习率 $k$；水的装卸系数 $\eta_{\text{pack}},\kappa_{\text{svc}}$。
+    \item \textbf{模型内推得出的量}：安全舰队规模 $I_{\text{safe}}$（由 $Cap_{SE}$、$f_{cycle}$、$Cap_{Rock}$ 配平）；建造/供水阶段的缺口分布、$S_{\text{moon}}^{*}$、$G_{\max}$、$W_q$ 等由 DES 或解析公式计算。
+    \item \textbf{写作要求}：正文将把前两类分别标注为“来自文献”与“情景假设”，并在附录给出主要假设的敏感性检验（提高回收率、增大 $S_{\text{moon}}$、放宽/收紧产能等）。
+\end{itemize}
 
 \subsection{Notation}
 \begin{table}[htbp]
@@ -581,140 +589,131 @@ fixed Apex-to-Moon transfer infrastructure cost because no orbital logistics hub
 is utilized. We treat $C_{launch}$ as an all-in marginal cost per Earth-to-Moon round trip (outbound + return propellant, refurbishment, and ground ops) under the aggressive full-reuse assumption, and $Cap_{Rock}$ as the net deliverable payload per launch as specified in the problem statement; thus no separate propellant term is added here.
 
 \subsection{Optimization of the Hybrid Transportation Scenario}
+\label{sec:scenarioC_opt}
 
-Unlike Scenarios A and B, which admit direct analytical solutions, Scenario C
-(the Hybrid Space Elevator--Rocket Transportation System) involves an inherent
-trade-off between transportation time and total system cost. Increasing the
-number of deployed rockets accelerates material delivery but incurs higher
-launch and operational costs. Therefore, Scenario C is formulated as a
-bi-objective optimization problem.
+Unlike Scenarios A and B, Scenario C introduces a genuine trade-off between
+completion time and cost: increasing the number of Earth-launched rockets
+accelerates early direct deliveries and enlarges the orbital cycling fleet,
+but also increases launch expenditure. Therefore, Scenario C is formulated as
+a bi-objective optimization problem.
 
 \subsubsection{Decision Variable}
-
-The key decision variable in Scenario C is the total number of rockets launched
-from Earth and subsequently retained for orbital cycling:
+The key decision variable is the total number of rockets launched from Earth
+and retained in orbit as the permanent cislunar fleet:
 \begin{equation}
-N_{Rock} \in \mathbb{Z}_{\ge 0}.
+N_{Rock}\in \mathbb{Z}_{\ge 0}.
 \end{equation}
 
-Each rocket performs one initial fully loaded Earth-to-Moon delivery during the
-deployment phase and then joins the Apex-to-Moon cyclic transportation supported
-by the Space Elevator system.
+\subsubsection{Time-Accumulative Delivered Mass (Parallel-Flow Approximation)}
+\label{sec:scenarioC_parallel_flow}
 
----
+Scenario C consists of two \emph{parallel} delivery channels:
+(i) direct Earth-to-Moon launches during the deployment phase, and
+(ii) Space-Elevator supply to the apex followed by apex-to-Moon cycling.
 
-\subsubsection{Delivered Mass Decomposition}
-
-The total mass delivered directly to the Moon during the deployment phase is
+\paragraph{(i) Direct delivery channel (Earth $\rightarrow$ Moon).}
+Let the aggregate maximum Earth-launch cadence be
 \begin{equation}
-M_{\text{direct}} = N_{Rock} \cdot Cap_{Rock}.
+f_{total}=\sum_{s\in\mathcal{S}} c_s, \qquad c_s=\frac{N_s}{T},\quad N_s\le \lambda_s^{\max}T.
+\end{equation}
+Let $\tau_{23}\approx \tau_2+\tau_3$ denote the nominal lead time from an Earth launch
+to completed unloading at the lunar colony (Programs (2)$\rightarrow$(3)).
+Then, by time $t$ (year), the cumulative number of completed direct deliveries is
+upper bounded by $\min\!\big(N_{Rock},\, f_{total}(t-\tau_{23})_+\big)$, where
+$(x)_+=\max(x,0)$. Hence,
+\begin{equation}
+M_{\text{direct}}(t;N_{Rock})
+=
+Cap_{Rock}\cdot \min\!\Big(N_{Rock},\ f_{total}\,(t-\tau_{23})_+\Big).
+\label{eq:mdirect}
 \end{equation}
 
-The remaining mass must be supplied via the Space Elevator system:
+\paragraph{(ii) Elevator-supported cycling channel (Earth $\rightarrow$ Apex $\rightarrow$ Moon).}
+After the elevator ground-to-apex transit delay $\tau_{\text{transit}}$, the elevator
+can supply at rate $Cap_{SE}$. The retained orbital fleet can deliver at most
+$N_{Rock}f_{cycle}Cap_{Rock}$ per year from apex to Moon. Therefore, the effective
+steady delivery rate of this channel is
 \begin{equation}
-M_{SE} = \max\bigl(0,\; M_{goal} - N_{Rock}\cdot Cap_{Rock} \bigr).
+R_{\text{apex}}(N_{Rock})
+=
+\min\!\Big(Cap_{SE},\ N_{Rock}\,f_{cycle}\,Cap_{Rock}\Big),
+\label{eq:rapex}
+\end{equation}
+and the cumulative delivered mass through this channel by time $t$ is approximated as
+\begin{equation}
+M_{\text{apex}}(t;N_{Rock})
+=
+R_{\text{apex}}(N_{Rock})\cdot (t-\tau_{\text{transit}})_+.
+\label{eq:mapex}
 \end{equation}
 
----
-
-\subsubsection{Effective Transportation Rate and Project Duration}
-
-After deployment, the orbital rocket fleet provides an annual Apex-to-Moon
-transportation capacity of
+\paragraph{Total delivered mass and completion time.}
+The total cumulative delivered mass by time $t$ is
 \begin{equation}
-R_{\text{rocket}} = N_{Rock}\cdot f_{cycle}\cdot Cap_{Rock}.
+M_{\text{delivered}}^{(C)}(t;N_{Rock})
+=
+M_{\text{direct}}(t;N_{Rock})+M_{\text{apex}}(t;N_{Rock}).
 \end{equation}
-
-The Space Elevator system provides an annual supply capacity of $Cap_{SE}$.
-Hence, the effective annual delivery rate during the steady-state phase is
+We define the project completion time as the earliest time when the cumulative
+delivery reaches the requirement:
 \begin{equation}
-R(N_{Rock}) = \min\Bigl( Cap_{SE},\; N_{Rock}\cdot f_{cycle}\cdot Cap_{Rock} \Bigr).
+T(N_{Rock})
+=
+\inf\Big\{t\ge 0:\ M_{\text{delivered}}^{(C)}(t;N_{Rock})\ge M_{goal}\Big\}.
+\label{eq:T_of_N_def}
 \end{equation}
-
-The time required to complete delivery of the remaining mass is approximated by
-\begin{equation}
-T_{\text{remain}}(N_{Rock}) =
-\frac{M_{SE}}{R(N_{Rock})}.
-\end{equation}
-
-In addition, deploying $N_{Rock}$ rockets from Earth is limited by the maximum
-aggregate cadence $f_{total}=\sum_s c_s$ (subject to $N_s\le\lambda_s^{\text{max}}T$ per site), resulting in a deployment time of
-\begin{equation}
-T_{\text{deploy}}(N_{Rock}) = \frac{N_{Rock}}{\sum_{s\in\mathcal{S}} c_s}.
-\end{equation}
-
-The total project duration is approximated as
-\begin{equation}
-T(N_{Rock}) =
-\max\Bigl( T_{\text{deploy}}(N_{Rock}),\; \tau_{\text{transit}}+T_{\text{remain}}(N_{Rock}) \Bigr),
-\end{equation}
-adding the elevator ground-to-apex transit delay before steady Apex-supported cycling can start.
-
----
+Because $M_{\text{delivered}}^{(C)}(t;N_{Rock})$ is non-decreasing and piecewise linear in $t$,
+$T(N_{Rock})$ can be obtained robustly by a one-dimensional search (or by checking the finite
+set of linear segments induced by $\tau_{23}$, $\tau_{\text{transit}}$, and
+$t_{\text{sat}}=\tau_{23}+N_{Rock}/f_{total}$).
 
 \subsubsection{Cost Model}
+\label{sec:scenarioC_cost}
 
-The total system cost for Scenario C consists of rocket launch costs, Space
-Elevator electricity costs, annual maintenance costs, and a fixed transfer
-system cost:
+The total cost includes launch cost, elevator electricity cost, and annual operating costs.
+We assume the elevator is throttled to avoid long-term inventory accumulation at the apex,
+so the \emph{charged} elevator-transported mass equals the mass actually delivered via the
+elevator-supported channel, i.e., $M_{\text{apex}}(T(N_{Rock});N_{Rock})$. Thus,
 \begin{equation}
-C(N_{Rock}) =
+C(N_{Rock})
+=
 C_{launch}\cdot N_{Rock}
-+ C_{elec\_unit}\cdot M_{SE}
-+ C_{maint}\cdot T(N_{Rock})
-+ C_{TV\_fixed}\cdot T(N_{Rock}).
++ C_{elec\_unit}\cdot M_{\text{apex}}\big(T(N_{Rock});N_{Rock}\big)
++ \big(C_{maint}+C_{TV\_fixed}\big)\cdot T(N_{Rock}).
+\label{eq:C_of_N}
 \end{equation}
 
----
-
-\subsubsection{Weighted-Sum Multi-Objective Optimization}
-
-Scenario C is formulated as a bi-objective minimization problem with objectives
-of minimizing total project duration and total cost:
+\subsubsection{Bi-objective Formulation and Weighted-Sum Method}
+Scenario C is formulated as
 \begin{equation}
-\min_{N_{Rock}} \; \bigl( T(N_{Rock}),\; C(N_{Rock}) \bigr).
+\min_{N_{Rock}\in\mathbb{Z}_{\ge 0}}\ \bigl(T(N_{Rock}),\ C(N_{Rock})\bigr).
 \end{equation}
-
-To obtain Pareto-optimal solutions, the weighted-sum method is adopted. The
-normalized scalar objective function is defined as
+To generate Pareto-optimal solutions, we adopt a weighted-sum scalarization:
 \begin{equation}
-J(N_{Rock}) =
+J(N_{Rock})
+=
 \alpha \frac{T(N_{Rock})}{T_{\text{ref}}}
 +
 (1-\alpha)\frac{C(N_{Rock})}{C_{\text{ref}}},
-\quad \alpha \in [0,1],
+\quad \alpha\in[0,1],
 \end{equation}
-where $T_{\text{ref}}$ and $C_{\text{ref}}$ are reference values used for
-normalization, chosen as the maximum observed project duration and cost among
-all feasible solutions.
-
-By varying the weight parameter $\alpha$, a set of Pareto-optimal solutions is
-generated, representing different trade-offs between time efficiency and
-economic cost. The final recommended solution may be selected based on practical
-preferences, such as a balanced compromise near the knee point of the Pareto
-frontier.
-
----
+where $T_{\text{ref}}$ and $C_{\text{ref}}$ are normalization constants (e.g., the maximum
+values among feasible candidates). By sweeping $\alpha$, we obtain a Pareto set and select
+a recommended design near the knee point.
 
 \subsubsection{Feasible Range of the Decision Variable}
+\label{sec:scenarioC_feasible}
 
-To ensure meaningful system operation, the search range of $N_{Rock}$ is bounded
-as follows:
+In Scenario C, it is always feasible to choose $N_{Rock}=0$ (then delivery relies entirely
+on the elevator-supported channel), and it is also feasible to deliver all materials via
+direct launches when $N_{Rock}\ge \lceil M_{goal}/Cap_{Rock}\rceil$. Therefore, we search
 \begin{equation}
-\left\lceil
-\frac{Cap_{SE}}{f_{cycle}\cdot Cap_{Rock}}
-\right\rceil
-\;\le\;
-N_{Rock}
-\;\le\;
-\left\lceil
-\frac{M_{goal}}{Cap_{Rock}}
-\right\rceil.
+0\ \le\ N_{Rock}\ \le\ \left\lceil\frac{M_{goal}}{Cap_{Rock}}\right\rceil.
+\label{eq:N_range_C}
 \end{equation}
+Optionally, if a strictly ``hybrid'' design is required (i.e., both channels are used), we
+enforce $0 < N_{Rock} < \lceil M_{goal}/Cap_{Rock}\rceil$.
 
-The lower bound guarantees that the orbital rocket fleet is capable of matching
-the Space Elevator supply rate, while the upper bound corresponds to delivering
-all required mass through direct Earth-to-Moon launches.
 
 \subsection{Model 2: Reliability Model under Non-Ideal Operations}
 \label{sec:model2}
