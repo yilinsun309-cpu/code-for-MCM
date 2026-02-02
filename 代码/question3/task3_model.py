@@ -27,8 +27,8 @@ DEFAULT_SCENARIO = 3
 
 DEFAULT_N = 100000
 DEFAULT_D_DAYS = 365.0
-DEFAULT_W_PERSON = 3.8
-DEFAULT_R_BASE = 0.98
+DEFAULT_W_PERSON = 157.1
+DEFAULT_R_BASE = 0.52
 DEFAULT_DELTA_R = 0.0
 DEFAULT_R_DEGRADE_START = None
 DEFAULT_R_DEGRADE_END = None
@@ -344,6 +344,7 @@ class Task3DES:
 
         self.stockout = False
         self.stockout_time: Optional[float] = None
+        self.stockout_duration_days = 0.0
         self.last_arrival_day = 0.0
         self.max_gap_days = 0.0
         self.arrivals = 0
@@ -402,8 +403,6 @@ class Task3DES:
         self.schedule_event(completion, "rocket", rid=rid)
 
     def consume_until(self, new_t: float) -> float:
-        if self.stockout:
-            return self.t
         d0 = self.t * DAYS_PER_YEAR
         d1 = new_t * DAYS_PER_YEAR
         if d1 <= d0:
@@ -419,14 +418,18 @@ class Task3DES:
             needed = c_day * dt_days
             if current_W > needed:
                 current_W -= needed
-            else:
-                time_to_zero = current_W / c_day if c_day > 0 else INF
-                t_hit_day = seg_start + time_to_zero
+                continue
+            time_to_zero = current_W / c_day if c_day > 0 else INF
+            t_hit_day = seg_start + time_to_zero
+            if not self.stockout:
                 self.stockout = True
                 self.stockout_time = t_hit_day / DAYS_PER_YEAR
-                self.W = 0.0
-                self.min_W = 0.0
-                return self.stockout_time
+            if d1 > t_hit_day:
+                self.stockout_duration_days += max(0.0, d1 - t_hit_day)
+            current_W = 0.0
+            self.W = 0.0
+            self.min_W = 0.0
+            return new_t
         self.W = current_W
         if self.W < self.min_W:
             self.min_W = self.W
@@ -583,8 +586,6 @@ class Task3DES:
             if ev.time > t_end:
                 break
             self.fluid_update(ev.time)
-            if self.stockout:
-                break
 
             if ev.etype == "inventory":
                 if self.inventory_event_time is None:
@@ -608,11 +609,7 @@ class Task3DES:
         if gap_end > self.max_gap_days:
             self.max_gap_days = gap_end
 
-        stockout_duration = 0.0
-        if self.stockout and self.stockout_time is not None:
-            stockout_duration = max(
-                0.0, self.params.d_days - self.stockout_time * DAYS_PER_YEAR
-            )
+        stockout_duration = self.stockout_duration_days
 
         return SimulationResult(
             stockout=self.stockout,
@@ -670,9 +667,66 @@ def summarize_results(
     max_inv_wait = [r.max_inventory_wait_days for r in results]
     max_launch_wait = [r.max_launch_wait_days for r in results]
 
+    q_water = params.eta_pack * params.Cap_Rock
+    mean_arrivals = mean(arrivals)
+    mean_direct_arrivals = mean(direct_arrivals)
+    direct_share = 0.0
+    if params.scenario == 2:
+        direct_share = 1.0
+    elif params.scenario == 3 and mean_arrivals > 0:
+        direct_share = min(1.0, max(0.0, mean_direct_arrivals / mean_arrivals))
+
+    delivery_rate_sim_ton_per_day = 0.0
+    if params.d_days > 0:
+        delivery_rate_sim_ton_per_day = mean_arrivals * q_water / params.d_days
+
+    cap_eff = params.Cap_SE
+    if params.scenario in (1, 3):
+        cap_eff = (1.0 - params.down_ratio) * params.Cap_SE
+    f_cycle = 0.0
+    if params.min_delivery_interval > 0:
+        f_cycle = 1.0 / params.min_delivery_interval
+    if params.scenario == 2:
+        capacity_rate_ton_per_year = params.f_total * q_water
+    else:
+        rocket_rate = (I_safe or 0) * f_cycle * q_water
+        capacity_rate_ton_per_year = min(cap_eff, rocket_rate) if rocket_rate > 0 else 0.0
+    delivery_rate_cap_ton_per_day = capacity_rate_ton_per_year / DAYS_PER_YEAR
+
+    def prefill_metrics(target_ton: float) -> Dict[str, float]:
+        if target_ton <= 0:
+            return {
+                "prefill_target_ton": 0.0,
+                "prefill_launches": 0.0,
+                "prefill_days_sim": 0.0,
+                "prefill_days_capacity": 0.0,
+                "prefill_cost_usd": 0.0,
+            }
+        launches = 0.0
+        if q_water > 0:
+            launches = float(math.ceil(target_ton / q_water))
+        days_sim = target_ton / delivery_rate_sim_ton_per_day if delivery_rate_sim_ton_per_day > 0 else INF
+        days_cap = target_ton / delivery_rate_cap_ton_per_day if delivery_rate_cap_ton_per_day > 0 else INF
+        if params.scenario == 2:
+            m_se = 0.0
+        elif params.scenario == 1:
+            m_se = target_ton
+        else:
+            m_se = target_ton * (1.0 - direct_share)
+        fixed_cost = 0.0
+        if params.scenario in (1, 3) and math.isfinite(days_cap):
+            fixed_cost = (params.C_maint + params.C_TV_fixed) * (days_cap / DAYS_PER_YEAR)
+        prefill_cost = params.C_launch * launches + params.C_elec_unit * m_se + fixed_cost
+        return {
+            "prefill_target_ton": target_ton,
+            "prefill_launches": launches,
+            "prefill_days_sim": days_sim if math.isfinite(days_sim) else float("inf"),
+            "prefill_days_capacity": days_cap if math.isfinite(days_cap) else float("inf"),
+            "prefill_cost_usd": prefill_cost,
+        }
+
     costs: List[float] = []
     year_scale = params.d_days / DAYS_PER_YEAR
-    q_water = params.eta_pack * params.Cap_Rock
     for r in results:
         if params.scenario == 1:
             M_se_water = W_net_base
@@ -709,16 +763,22 @@ def summarize_results(
         "launch_slot_interval_days": DAYS_PER_YEAR / params.f_total,
         "mean_min_inventory_ton": mean(min_inv),
         "min_inventory_ton": min(min_inv) if min_inv else 0.0,
-        "mean_arrivals": mean(arrivals),
-        "mean_direct_arrivals": mean(direct_arrivals),
+        "mean_arrivals": mean_arrivals,
+        "mean_direct_arrivals": mean_direct_arrivals,
         "mean_failures": mean(failures),
         "mean_launches": mean(launches),
         "max_inventory_queue": max(max_inv_queue) if max_inv_queue else 0,
         "max_inventory_wait_days": max(max_inv_wait) if max_inv_wait else 0.0,
         "max_launch_wait_days": max(max_launch_wait) if max_launch_wait else 0.0,
+        "q_water_ton_per_arrival": q_water,
+        "direct_share": direct_share,
+        "delivery_rate_sim_ton_per_day": delivery_rate_sim_ton_per_day,
+        "delivery_rate_capacity_ton_per_day": delivery_rate_cap_ton_per_day,
         "mean_cost_usd": mean(costs),
         "min_cost_usd": min(costs) if costs else 0.0,
         "max_cost_usd": max(costs) if costs else 0.0,
+        "prefill_for_S_moon_star": prefill_metrics(S_moon_star),
+        "prefill_for_S_moon_min": prefill_metrics(S_moon_min),
     }
     return summary
 

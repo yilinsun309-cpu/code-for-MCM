@@ -22,6 +22,7 @@ from typing import Any, Deque, Dict, List, Optional, Tuple
 
 INF = 1.0e30
 DAYS_PER_YEAR = 365.0
+INVENTORY_EPS = 1.0e-6
 
 # -------------------- Global Defaults --------------------
 DEFAULT_SCENARIO = 3
@@ -141,6 +142,20 @@ def parse_down_ratio(value: Any) -> Tuple[float, float]:
     return (float(value), float(value))
 
 
+def parse_scenario(value: Any) -> int:
+    if isinstance(value, str):
+        text = value.strip()
+        if text.isdigit():
+            return int(text)
+        mapping = {"A": 1, "B": 2, "C": 3}
+        key = text.upper()
+        if key in mapping:
+            return mapping[key]
+    if isinstance(value, (int, float)):
+        return int(value)
+    raise ValueError("scenario must be 1/2/3 or A/B/C")
+
+
 def apply_overrides(params: Task2Params, overrides: Dict[str, Any]) -> Task2Params:
     data = asdict(params)
     for key, value in overrides.items():
@@ -158,6 +173,8 @@ def apply_overrides(params: Task2Params, overrides: Dict[str, Any]) -> Task2Para
         data["fail_cost"] = _normalize_int_key_dict(overrides["fail_cost"])
     if "down_ratio" in overrides:
         data["down_ratio"] = parse_down_ratio(overrides["down_ratio"])
+    if "scenario" in overrides:
+        data["scenario"] = parse_scenario(overrides["scenario"])
 
     return Task2Params(**data)
 
@@ -285,8 +302,9 @@ class Task2Simulator:
         r = self.rocks.get(rid)
         if r is None:
             return
+        eps = INVENTORY_EPS * max(1.0, r.payload)
         needed = r.payload - self.S
-        if needed <= 0:
+        if needed <= eps:
             return
         start_flow = max(self.t, self.params.tau_transit)
         ready_time = start_flow + needed / self.cap_eff
@@ -301,10 +319,11 @@ class Task2Simulator:
             if r is None or r.state == 6:
                 self.waiting.popleft()
                 continue
-            if self.S < r.payload:
+            eps = INVENTORY_EPS * max(1.0, r.payload)
+            if self.S + eps < r.payload:
                 break
             self.waiting.popleft()
-            self.S -= r.payload
+            self.S = max(0.0, self.S - r.payload)
             self.schedule_event(self.t + self.tau_robust[3], "rocket", rid=rid)
         if self.waiting:
             self.schedule_inventory_event()
@@ -354,8 +373,9 @@ class Task2Simulator:
         if next_state == 3 and requires_inventory(self.params.scenario, state, next_state):
             if self.cap_eff <= 0:
                 return
-            if self.S >= r.payload:
-                self.S -= r.payload
+            eps = INVENTORY_EPS * max(1.0, r.payload)
+            if self.S + eps >= r.payload:
+                self.S = max(0.0, self.S - r.payload)
                 self.schedule_event(self.t + self.tau_robust[3], "rocket", rid=rid)
             else:
                 self.waiting.append(rid)
@@ -546,7 +566,7 @@ def run_monte_carlo(
 def main() -> None:
     parser = argparse.ArgumentParser(description="Task 2 reliability simulation")
     parser.add_argument("--config", type=str, default=None, help="Path to JSON config")
-    parser.add_argument("--scenario", type=int, default=None, help="Scenario 1/2/3")
+    parser.add_argument("--scenario", type=str, default=None, help="Scenario 1/2/3 or A/B/C")
     parser.add_argument("--n-mc", type=int, default=50, help="Monte Carlo runs")
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
     parser.add_argument("--verbose", action="store_true", help="Enable per-event logs")
@@ -564,7 +584,7 @@ def main() -> None:
         overrides = load_config(args.config)
         params = apply_overrides(params, overrides)
     if args.scenario is not None:
-        params = Task2Params(**{**asdict(params), "scenario": args.scenario})
+        params = Task2Params(**{**asdict(params), "scenario": parse_scenario(args.scenario)})
     if args.seed is not None:
         params = Task2Params(**{**asdict(params), "seed": args.seed})
 

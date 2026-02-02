@@ -21,6 +21,8 @@ from typing import Any, Deque, Dict, List, Optional, Tuple, Sequence
 
 INF = 1.0e30
 DAYS_PER_YEAR = 365.0
+EPS_WATER = 1.0e-6
+EPS_TIME = 1.0e-12
 
 # -------------------- Global Defaults --------------------
 DEFAULT_SCENARIO = 3
@@ -42,19 +44,12 @@ DEFAULT_EXTRA_LOSS_FRAC = 0.0
 # Coupling to Task 2
 DEFAULT_CAP_SE = 5.37e5
 DEFAULT_CAP_ROCK = 125.0
-DEFAULT_F_TOTAL = 3834.0
+DEFAULT_F_TOTAL = 3844.0
 DEFAULT_TAU_DAYS = {1: 3.0, 2: 3.0, 3: 3.0, 4: 3.0, 5: 3.0}
 DEFAULT_DELTA_TAU_DAYS = 0.0
 DEFAULT_ELEVATOR_DELAY_DAYS = 14.0
 DEFAULT_MIN_CYCLE_DAYS = 6.0
-# Align with Task2 baseline (launch+dock combo, return+dock combo)
-DEFAULT_P_FAIL = {
-    1: 1.0 - (1.0 - 1.78e-2) * (1.0 - 1.03e-2),
-    2: 1.78e-2,
-    3: 1.0e-3,
-    4: 1.0 - (1.0 - 1.0e-3) * (1.0 - 1.03e-2),
-    5: 3.6e-4,
-}
+DEFAULT_P_FAIL = {1: 0.0, 2: 1.78e-2, 3: 1.0e-3, 4: 1.03e-2, 5: 0.0}
 DEFAULT_I_SAFE = 70
 DEFAULT_DELTA_REPLACEMENT_DAYS = 2.0
 DEFAULT_DOWN_RATIO = (0.0, 0.1)
@@ -66,8 +61,8 @@ DEFAULT_KAPPA_SVC = 1.0
 DEFAULT_ALPHA = 0.99
 
 # Cost parameters (USD)
-DEFAULT_C_LAUNCH = 1.5e8
-DEFAULT_C_ELEC_UNIT = 4.15
+DEFAULT_C_LAUNCH = 1.5e7
+DEFAULT_C_ELEC_UNIT = 7156.8
 DEFAULT_C_MAINT = 1.2e8
 DEFAULT_C_TV_FIXED = 3.0e8
 
@@ -110,7 +105,7 @@ class Task3Params:
     p_fail: Dict[int, float] = field(
         default_factory=lambda: DEFAULT_P_FAIL.copy()
     )
-    I_safe: int = DEFAULT_I_SAFE
+    I_safe: Optional[int] = DEFAULT_I_SAFE
     delta_replacement: float = DEFAULT_DELTA_REPLACEMENT_DAYS / DAYS_PER_YEAR
     down_ratio: Tuple[float, float] = DEFAULT_DOWN_RATIO
     initial_rockets: Optional[int] = DEFAULT_INITIAL_ROCKETS
@@ -242,7 +237,7 @@ def validate_params(params: Task3Params) -> None:
         raise ValueError("Cap_Rock must be > 0")
     if params.f_total <= 0:
         raise ValueError("f_total must be > 0")
-    if params.I_safe < 0:
+    if params.I_safe is not None and params.I_safe < 0:
         raise ValueError("I_safe must be >= 0")
     if params.elevator_delay < 0:
         raise ValueError("elevator_delay must be >= 0")
@@ -256,6 +251,15 @@ def validate_params(params: Task3Params) -> None:
     for l in range(1, 6):
         if l not in params.tau:
             raise ValueError("tau missing program {}".format(l))
+
+
+def compute_i_safe(params: Task3Params) -> int:
+    if params.min_delivery_interval <= 0:
+        return 0
+    f_cycle = 1.0 / params.min_delivery_interval
+    if f_cycle <= 0:
+        return 0
+    return int(math.ceil(params.Cap_SE / (f_cycle * params.Cap_Rock)))
 
 
 def phi_for_scenario(scenario: int) -> Dict[int, int]:
@@ -325,6 +329,7 @@ class Task3Simulator:
             k: params.kappa_svc * (params.tau[k] + params.delta_tau)
             for k in params.tau
         }
+        self.I_safe = params.I_safe if params.I_safe is not None else compute_i_safe(params)
 
         self.t = 0.0
         self.S = 0.0
@@ -335,6 +340,7 @@ class Task3Simulator:
         self.max_deficit = 0
         self.pending_replacements = 0
         self.next_launch_slot = 0.0
+        self.launch_slot_interval = 1.0 / params.f_total
         self.next_rid = 1
         self.inventory_event_time: Optional[float] = None
         self.max_inventory_queue = 0
@@ -377,19 +383,14 @@ class Task3Simulator:
         return sum(1 for r in self.rocks.values() if r.state != 6)
 
     def update_deficit(self) -> None:
-        deficit = max(0, self.params.I_safe - self.active_count())
+        deficit = max(0, self.I_safe - self.active_count())
         if deficit > self.max_deficit:
             self.max_deficit = deficit
 
-    def add_rocket(self, init_state: int, loaded_from_elevator: Optional[bool] = None) -> None:
+    def add_rocket(self, init_state: int) -> None:
         rid = self.next_rid
         self.next_rid += 1
-        self.rocks[rid] = Rocket(
-            rid=rid,
-            state=init_state,
-            payload=self.q_water,
-            loaded_from_elevator=loaded_from_elevator,
-        )
+        self.rocks[rid] = Rocket(rid=rid, state=init_state, payload=self.q_water)
         self.schedule_event(self.t + self.tau_robust[init_state], "rocket", rid=rid)
 
     def schedule_program3(self, rid: int, start_time: float) -> None:
@@ -431,8 +432,6 @@ class Task3Simulator:
         return segments
 
     def consume_until(self, new_t: float) -> float:
-        if self.stockout:
-            return self.t
         d0 = self.t * DAYS_PER_YEAR
         d1 = new_t * DAYS_PER_YEAR
         if d1 <= d0:
@@ -451,11 +450,12 @@ class Task3Simulator:
             else:
                 time_to_zero = current_W / c_day if c_day > 0 else INF
                 t_hit_day = seg_start + time_to_zero
-                self.stockout = True
-                self.stockout_time = t_hit_day / DAYS_PER_YEAR
+                if not self.stockout:
+                    self.stockout = True
+                    self.stockout_time = t_hit_day / DAYS_PER_YEAR
                 self.W = 0.0
                 self.min_W = 0.0
-                return self.stockout_time
+                current_W = 0.0
         self.W = current_W
         if self.W < self.min_W:
             self.min_W = self.W
@@ -486,13 +486,15 @@ class Task3Simulator:
         if r is None:
             return
         needed = r.payload - self.S
-        if needed <= 0:
+        if needed <= EPS_WATER:
             return
         delay = self.params.elevator_delay
         if self.t < delay:
             ready_time = delay + needed / self.cap_eff
         else:
             ready_time = self.t + needed / self.cap_eff
+        if ready_time <= self.t + EPS_TIME:
+            ready_time = self.t + EPS_TIME
         if self.inventory_event_time is None or ready_time < self.inventory_event_time:
             self.inventory_event_time = ready_time
             self.schedule_event(ready_time, "inventory")
@@ -505,7 +507,7 @@ class Task3Simulator:
                 self.waiting.popleft()
                 self.waiting_since.pop(rid, None)
                 continue
-            if self.S < r.payload:
+            if self.S + EPS_WATER < r.payload:
                 break
             self.waiting.popleft()
             wait_start = self.waiting_since.pop(rid, None)
@@ -519,16 +521,12 @@ class Task3Simulator:
             self.schedule_inventory_event()
 
     def order_replacements(self) -> None:
-        deficit = max(0, self.params.I_safe - (self.active_count() + self.pending_replacements))
+        deficit = max(0, self.I_safe - (self.active_count() + self.pending_replacements))
         if deficit <= 0:
             return
         for _ in range(deficit):
             t_ready = self.t + self.params.delta_replacement
-            t_start = max(t_ready, self.next_launch_slot)
-            wait = t_start - t_ready
-            if wait * DAYS_PER_YEAR > self.max_launch_wait:
-                self.max_launch_wait = wait * DAYS_PER_YEAR
-            self.next_launch_slot = t_start + 1.0 / self.params.f_total
+            t_start = self.reserve_launch_slot(t_ready)
             self.pending_replacements += 1
             if self.pending_replacements > self.max_pending_replacements:
                 self.max_pending_replacements = self.pending_replacements
@@ -536,7 +534,7 @@ class Task3Simulator:
 
     def handle_insert(self) -> None:
         self.pending_replacements = max(0, self.pending_replacements - 1)
-        self.add_rocket(self.start_state)
+        self.add_rocket(self.start_state, start_time=self.t)
         self.launches += 1
         self.update_deficit()
 
@@ -578,15 +576,6 @@ class Task3Simulator:
             return
 
         r.state = next_state
-        if next_state == 2:
-            # Ground launch constrained by f_total cadence (Scenario 2)
-            t_start = max(self.t, self.next_launch_slot)
-            wait = t_start - self.t
-            if wait * DAYS_PER_YEAR > self.max_launch_wait:
-                self.max_launch_wait = wait * DAYS_PER_YEAR
-            self.next_launch_slot = t_start + 1.0 / self.params.f_total
-            self.schedule_event(t_start + self.tau_robust[2], "rocket", rid=rid)
-            return
         if next_state == 3 and requires_inventory(self.params.scenario, state, next_state):
             r.loaded_from_elevator = True
             if self.cap_eff <= 0:
@@ -614,12 +603,11 @@ class Task3Simulator:
     ) -> SimulationResult:
         init_count = self.params.initial_rockets
         if init_count is None:
-            init_count = self.params.I_safe
+            init_count = self.I_safe
 
         init_state = self.start_state
         for _ in range(int(init_count)):
-            init_loaded = True if init_state == 4 and self.params.scenario in (1, 3) else None
-            self.add_rocket(init_state, loaded_from_elevator=init_loaded)
+            self.add_rocket(self.start_state)
 
         if verbose:
             print(
@@ -635,8 +623,6 @@ class Task3Simulator:
             if ev.time > t_end:
                 break
             self.fluid_update(ev.time)
-            if self.stockout:
-                break
             event_count += 1
 
             if ev.etype == "inventory":
@@ -707,6 +693,11 @@ def summarize_results(
     max_gaps = [r.max_gap_days for r in results]
     gap_q = quantile(max_gaps, params.alpha)
     S_moon_star = c_max * gap_q
+    wq_runs = [max(r.max_inventory_wait_days, r.max_launch_wait_days) for r in results]
+    wq_q = quantile(wq_runs, params.alpha)
+    delta_days = params.delta_replacement * DAYS_PER_YEAR
+    S_moon_min = c_max * (delta_days + wq_q)
+    I_safe = params.I_safe if params.I_safe is not None else compute_i_safe(params)
 
     stockout_runs = sum(1 for r in results if r.stockout)
     feasible_runs = len(results) - stockout_runs
@@ -756,6 +747,11 @@ def summarize_results(
         "c_max_ton_per_day": c_max,
         "max_gap_quantile_days": gap_q,
         "S_moon_star_ton": S_moon_star,
+        "W_q_quantile_days": wq_q,
+        "S_moon_min_ton": S_moon_min,
+        "delta_replacement_days": delta_days,
+        "I_safe": I_safe,
+        "launch_slot_interval_days": DAYS_PER_YEAR / params.f_total,
         "mean_min_inventory_ton": mean(min_inv),
         "min_inventory_ton": min(min_inv) if min_inv else 0.0,
         "mean_arrivals": mean(arrivals),
@@ -810,6 +806,8 @@ def main() -> None:
     parser.add_argument("--eta-pack", type=float, default=None, help="Water packing efficiency")
     parser.add_argument("--kappa-svc", type=float, default=None, help="Service time multiplier")
     parser.add_argument("--alpha", type=float, default=None, help="Confidence level for safety stock")
+    parser.add_argument("--i-safe", type=int, default=None, help="Override I_safe fleet size")
+    parser.add_argument("--initial-rockets", type=int, default=None, help="Initial rocket count")
     parser.add_argument("--verbose", action="store_true", help="Enable per-event logs")
     parser.add_argument("--log-every", type=int, default=DEFAULT_LOG_EVERY, help="Log per N events")
     parser.add_argument("--mc-log-every", type=int, default=DEFAULT_MC_LOG_EVERY, help="Log per N MC runs")
@@ -854,6 +852,10 @@ def main() -> None:
         data["kappa_svc"] = args.kappa_svc
     if args.alpha is not None:
         data["alpha"] = args.alpha
+    if args.i_safe is not None:
+        data["I_safe"] = args.i_safe
+    if args.initial_rockets is not None:
+        data["initial_rockets"] = args.initial_rockets
     params = Task3Params(**data)
 
     validate_params(params)
