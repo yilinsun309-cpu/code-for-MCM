@@ -128,6 +128,12 @@ $f_{total}$ & Sum of site cadences $f_{total}=\sum_{s\in\mathcal{S}} c_s$ & laun
 & From site-level forecasts \\
 $f_{cycle}$ & Max. round-trips per rocket per year (apex-to-Moon) & cycles/yr & $
 \approx 60^\dagger$ \\
+\multicolumn{4}{l}{\textit{\textbf{Launch-site cadence parameters}}} \\
+$\mathcal{S}$ & Set of launch sites & -- & see Table~\ref{tab:launch_forecast_interval_2050} \\
+$\lambda_s^{\text{max}}$ & Max annual cadence at site $s$ & launches/yr & from forecast \\
+$c_s$ & Allocated cadence at site $s$ ($c_s=N_s/T$) & launches/yr & $\le \lambda_s^{\text{max}}$ \\
+$N_s$ & Launches assigned to site $s$ over horizon $T$ & launches & decision \\
+$\Delta t_s$ & Avg. interval at site $s$ ($365/\lambda_s^{\text{max}}$) & days & computed \\
 \bottomrule
 \end{tabular}
 \vspace{0.2cm}
@@ -166,7 +172,6 @@ $c_l^{\text{loss}}$ & Cost/loss incurred if failure occurs during program $l$ & 
 \bottomrule
 \end{tabular}
 \end{table}
-这些默认值直接对应本题给出的“故障率/威胁频度”数据；若后续获取到更精细的环境或零件可靠性数据，可在此表基础上做区间缩放或分情景替换。
 
                                                                                
 \subsection{Data Preparation}
