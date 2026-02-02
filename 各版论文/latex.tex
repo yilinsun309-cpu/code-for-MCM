@@ -1564,72 +1564,6 @@ where $Q_{\alpha}(G)$ is the $\alpha$-quantile of $G$ estimated from Monte Carlo
 This provides a direct policy interpretation: \emph{Task~3's additional cost is the price of buffering against
 rare but severe supply interruptions.}
 
-\section{Task 4: Environmental Impact and Mitigation}
-\label{sec:task4_env}
-
-\subsection{Three-tier metric system (overview)}
-To capture local ecological bottlenecks, global externalities, and failure-induced waste within the unified DES time line, we use three layers:
-\begin{itemize}
-    \item \textbf{Bottleneck (hard constraint)}: site-level green launch caps reshape the feasible schedule.
-    \item \textbf{Objective (proxy for global externality)}: stratospheric forcing proxy and carbon intensity enter scenario comparison/optimization.
-    \item \textbf{Systemic risk}: environmental sunk cost from failures, coupled to Task~2 failure/replacement logic.
-\end{itemize}
-
-\subsection{Bottleneck metric: ecological launch caps}
-For each launch site $j\in\mathcal{S}$ and year $y$ impose
-\begin{equation}
-N_{\text{launch},j}(y)\ \le\ f_{\text{green},j},
-\end{equation}
-where $N_{\text{launch},j}(y)$ counts all launches (including replacements) in year $y$, and $f_{\text{green},j}$ is the annual eco-capacity derived from noise/thermal/acid deposition limits.
-
-\paragraph{DES coupling (red line).}
-If $N_{\text{launch},j}(y)=f_{\text{green},j}$, any new launch assigned to site $j$ is delayed to the earliest slot in $y\!+\!1$ or reassigned to another site $j'$ (with its own cadence and possibly longer prep/transfer time). This rule is implemented in the launch-slot server before time advance.
-
-\paragraph{Impact.}
-The constraint can cause non-linear jumps in completion time $T$ when key sites exhaust quotas, elevating environment from “soft preference” to a feasibility bottleneck.
-
-\subsection{Objective metrics (global externalities)}
-\paragraph{Stratospheric forcing proxy.}
-\begin{equation}
-E_{\text{strat}}=\sum_{j\in\mathcal{S}} N_{\text{launch},j}\cdot \text{Fuel}_j \cdot \beta,
-\end{equation}
-where $\text{Fuel}_j$ is mean propellant per launch from site $j$, and $\beta$ converts fuel burn to a relative stratospheric impact proxy. Used for cross-scenario comparison (A/B/C), not as absolute radiative forcing.
-
-\paragraph{Carbon intensity per delivered ton.}
-\begin{equation}
-CI=\frac{E_{\text{CO}_2e}}{M_{\text{delivered}}},
-\end{equation}
-with $E_{\text{CO}_2e}$ from fuel burn $\times$ emission factor (rockets) or electricity $\times$ grid factor (elevator). Highlights the decarbonization advantage of elevator-supported scenarios.
-
-\subsection{Systemic metric (failure-induced sunk cost)}
-Define environmental sunk-cost intensity:
-\begin{equation}
-ESCF=\frac{\sum_{k\in F} E_{\text{env}}(k)}{\sum_{d\in D} M_{\text{delivered}}(d)},
-\end{equation}
-where $F$ is the set of failure events (launch/transfer aborts), $E_{\text{env}}(k)$ their environmental input proxies, and $D$ the set of successful deliveries. It measures extra environmental input per delivered ton; larger values imply lower environmental resilience.
-
-\subsection{Outputs and visualization (minimum set)}
-\begin{itemize}
-    \item \textbf{Launch-site quota heatmap}: $ \text{Utilization}_j=N_{\text{launch},j}/f_{\text{green},j}$ to show which sites hit bottlenecks first.
-    \item \textbf{Scenario bar chart}: compare $E_{\text{strat}}$, $CI$, $ESCF$ across A/B/C.
-    \item \textbf{Stochastic $T^*$ distribution}: violin or KDE of completion time under Task~2+quota to show tail risk.
-    \item \textbf{Pareto frontier (time–cost–environment)}: optional 2D/3D plot if multi-objective optimization is run.
-\end{itemize}
-
-\subsection{Mitigation levers (policy knobs)}
-\begin{itemize}
-    \item \textbf{Quota policy}: set and tighten $f_{\text{green},j}$ for sensitive sites.
-    \item \textbf{Mode mix}: increase elevator share $\rho$ to cut high-altitude chemical launches.
-    \item \textbf{Robust replenishment}: raise $I_{\text{safe}}$ or trigger earlier replenishment to smooth peaks, reducing queueing and failure-induced launches, thereby lowering both $T$ tails and $ESCF$.
-\end{itemize}
-
-\subsection{Implementation checklist (no new data required)}
-\begin{itemize}
-\item Log per-year, per-site launches $N_{\text{launch},j}(y)$, failures, replacement launches, and total fuel/energy.
-\item In the dispatcher: if a site hits $f_{\text{green},j}$, delay to next-year slot or reassign site before scheduling.
-\item Report and plot $E_{\text{strat}}$, $CI$, $ESCF$ for scenarios A/B/C.
-\end{itemize}
-
 \subsubsection{Cost Accounting and Scenario-Specific Elevator Water Mass}
 \label{sec:model3_cost_opt}
 
@@ -1664,6 +1598,72 @@ For each candidate, we report:
 \item queueing statistics ($W_q$, max queue length at launch-slot/Apex),
 \item robustness metrics (failures and replacement launches),
 \item annual incremental cost $C_{\text{water}}$.
+\end{itemize}
+
+\section{Task 4: Environmental Impact and Mitigation}
+\label{sec:task4_env}
+
+\subsection{Three-tier metric system (overview)}
+To capture local ecological bottlenecks, global externalities, and failure-induced waste within the unified DES time line, we use three layers:
+\begin{itemize}
+    \item \textbf{Bottleneck (hard constraint)}: site-level green launch caps reshape the feasible schedule.
+    \item \textbf{Objective (proxy for global externality)}: stratospheric forcing proxy and carbon intensity enter scenario comparison/optimization.
+    \item \textbf{Systemic risk}: environmental sunk cost from failures, coupled to Task~2 failure/replacement logic.
+\end{itemize}
+
+\subsection{Bottleneck metric: ecological launch caps}
+For each launch site $j\in\mathcal{S}$ and year $y$ impose
+\begin{equation}
+N_{\text{launch},j}(y)\ \le\ f_{\text{green},j},
+\end{equation}
+where $N_{\text{launch},j}(y)$ counts all launches (including replacements) in year $y$, and $f_{\text{green},j}$ is the annual eco-capacity derived from noise/thermal/acid deposition limits.
+
+\paragraph{DES coupling (red line).}
+If $N_{\text{launch},j}(y)=f_{\text{green},j}$, any new launch assigned to site $j$ is delayed to the earliest slot in $y\!+\!1$ or reassigned to another site $j'$ (with its own cadence and possibly longer prep/transfer time). This rule is implemented in the launch-slot server before time advance.
+
+\paragraph{Impact.}
+The constraint can cause non-linear jumps in completion time $T$ when key sites exhaust quotas, elevating environment from “soft preference” to a feasibility bottleneck.
+
+\subsection{Objective metrics (global externalities)}
+\paragraph{Stratospheric forcing proxy.}
+\begin{equation}
+E_{\text{strat}}=\sum_{y}\sum_{j\in\mathcal{S}} N_{\text{launch},j}(y)\cdot \text{Fuel}_j \cdot \beta,
+\end{equation}
+where $N_{\text{launch},j}(y)$ is the launch count at site $j$ in year $y$, $\text{Fuel}_j$ is mean propellant per launch from site $j$, and $\beta$ converts fuel burn to a relative stratospheric impact proxy. Used for cross-scenario comparison (A/B/C), not as absolute radiative forcing.
+
+\paragraph{Carbon intensity per delivered ton.}
+\begin{equation}
+CI=\frac{E_{\text{CO}_2e}}{M_{\text{delivered}}},
+\end{equation}
+with $E_{\text{CO}_2e}$ from fuel burn $\times$ emission factor (rockets) or electricity $\times$ grid factor (elevator). Highlights the decarbonization advantage of elevator-supported scenarios.
+
+\subsection{Systemic metric (failure-induced sunk cost)}
+Define environmental sunk-cost intensity:
+\begin{equation}
+ESCF=\frac{\sum_{k\in F} E_{\text{env}}(k)}{\sum_{d\in D} M_{\text{delivered}}(d)},
+\end{equation}
+where $F$ is the set of failure events (launch/transfer aborts), $E_{\text{env}}(k)$ their environmental input proxies, and $D$ the set of successful deliveries. It measures extra environmental input per delivered ton; larger values imply lower environmental resilience. If $\sum_{d\in D} M_{\text{delivered}}(d)=0$, ESCF is undefined and should be reported separately.
+
+\subsection{Outputs and visualization (minimum set)}
+\begin{itemize}
+\item \textbf{Launch-site quota heatmap}: $ \text{Utilization}_j(y)=N_{\text{launch},j}(y)/f_{\text{green},j}$ (site, year) to show which sites hit bottlenecks first.
+    \item \textbf{Scenario bar chart}: compare $E_{\text{strat}}$, $CI$, $ESCF$ across A/B/C.
+    \item \textbf{Stochastic $T^*$ distribution}: violin or KDE of completion time under Task~2+quota to show tail risk.
+    \item \textbf{Pareto frontier (time–cost–environment)}: optional 2D/3D plot if multi-objective optimization is run.
+\end{itemize}
+
+\subsection{Mitigation levers (policy knobs)}
+\begin{itemize}
+\item \textbf{Quota policy}: set and tighten $f_{\text{green},j}$ for sensitive sites.
+\item \textbf{Mode mix}: increase elevator share $\rho$ (fraction of total mass moved via elevator) to cut high-altitude chemical launches.
+    \item \textbf{Robust replenishment}: raise $I_{\text{safe}}$ or trigger earlier replenishment to smooth peaks, reducing queueing and failure-induced launches, thereby lowering both $T$ tails and $ESCF$.
+\end{itemize}
+
+\subsection{Implementation checklist (no new data required)}
+\begin{itemize}
+\item Log per-year, per-site launches $N_{\text{launch},j}(y)$, failures, replacement launches, and total fuel/energy.
+\item In the dispatcher: if a site hits $f_{\text{green},j}$, delay to next-year slot or reassign site before scheduling.
+\item Report and plot $E_{\text{strat}}$, $CI$, $ESCF$ for scenarios A/B/C.
 \end{itemize}
 
 
