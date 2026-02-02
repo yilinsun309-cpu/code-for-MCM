@@ -404,7 +404,8 @@ class Task3Simulator:
     def add_rocket(self, init_state: int) -> None:
         rid = self.next_rid
         self.next_rid += 1
-        self.rocks[rid] = Rocket(rid=rid, state=init_state, payload=self.q_water)
+        loaded = True if init_state == 4 and self.params.scenario in (1, 3) else None
+        self.rocks[rid] = Rocket(rid=rid, state=init_state, payload=self.q_water, loaded_from_elevator=loaded)
         self.schedule_event(self.t + self.tau_robust[init_state], "rocket", rid=rid)
 
     def schedule_program3(self, rid: int, start_time: float) -> None:
@@ -560,7 +561,8 @@ class Task3Simulator:
             self.max_gap_days = gap
         self.last_arrival_day = arrival_day
         self.arrivals += 1
-        if from_elevator is False:
+        # Only Scenario 2 counts as direct Earth-to-Moon delivery during operational year
+        if self.params.scenario == 2 and from_elevator is False:
             self.direct_arrivals += 1
         self.W += self.q_water
         if self.W < self.min_W:
@@ -643,6 +645,8 @@ class Task3Simulator:
             if ev.time > t_end:
                 break
             self.fluid_update(ev.time)
+            if self.stockout:
+                break
             event_count += 1
 
             if ev.etype == "inventory":
@@ -742,7 +746,8 @@ def summarize_results(
         elif params.scenario == 2:
             M_se_water = 0.0
         else:
-            M_se_water = max(0.0, W_net - r.direct_arrivals * (params.eta_pack * params.Cap_Rock))
+            # Scenario 3 operational year treated as elevator-fed cycling; direct arrivals not charged as elevator offset
+            M_se_water = W_net
         if params.scenario == 2:
             C_water = params.C_launch * r.arrivals
         else:
