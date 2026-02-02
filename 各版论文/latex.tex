@@ -492,11 +492,12 @@ T_{\text{deploy}}^{(A)}=\frac{N_{Rock}}{\sum_{s\in\mathcal{S}} c_s}.
 \end{equation}
 
 Therefore, the total project duration in Scenario A is approximated by the slower
-process between elevator supply and rocket deployment:
+process between elevator supply (which experiences a lead time $\tau_{\text{transit}}$ before any Apex cargo is available) and rocket deployment:
 \begin{equation}
 T_A^{*}=\max\!\left(\tau_{\text{transit}}+T_{\text{elev}}^{(A)},\ T_{\text{deploy}}^{(A)}\right)
 =\max\!\left(\tau_{\text{transit}}+\frac{M_{goal}}{Cap_{SE}},\ \frac{N_{Rock}}{\sum_{s\in\mathcal{S}} c_s}\right).
 \end{equation}
+That is, the elevator path is effectively shifted by $\tau_{\text{transit}}$ before steady throughput $\frac{M_{goal}}{Cap_{SE}}$ accumulates, while rocket deployment proceeds in parallel; the overall completion time is governed by whichever branch finishes later (lead-shifted elevator or deployment).
 
 
 To prevent long-term accumulation of cargo at the anchor point, the orbital
@@ -579,7 +580,7 @@ C_{launch}\cdot N_{Rock,B}^{*}.
 \noindent
 Note that Scenario B does not require Space Elevator electricity costs or the
 fixed Apex-to-Moon transfer infrastructure cost because no orbital logistics hub
-is utilized.
+is utilized. We treat $C_{launch}$ as an all-in marginal cost per Earth-to-Moon round trip (outbound + return propellant, refurbishment, and ground ops) under the aggressive full-reuse assumption, and $Cap_{Rock}$ as the net deliverable payload per launch as specified in the problem statement; thus no separate propellant term is added here.
 
 \subsection{Optimization of the Hybrid Transportation Scenario}
 
