@@ -118,7 +118,7 @@ $C_{launch}$ & Cost per single Falcon Heavy launch & USD & $1.5 \times 10^7$ (ag
 $C_{elec\_unit}$ & Electricity cost per ton via Space Elevator & USD/ton & $7156.8^*$
 \\
 $C_{maint}$ & Annual maintenance cost for SE system & USD/yr & $1.2 \times 10^8$ \\
-$C_{TV\_fixed}$ & Fixed cost for Apex-to-Moon Transfer system & USD/yr & $3.0 \times
+$C_{TV\_fixed}$ & Annual fixed cost for Apex-to-Moon Transfer system & USD/yr & $3.0 \times
 10^8$\\
 \multicolumn{4}{l}{\textit{\textbf{Rate Constraints}}} \\
 $Cap_{SE}$ & Annual capacity of the Space Elevator system & ton/yr & $5.37 \times
@@ -146,7 +146,7 @@ $\mathcal{L}$ & Set of operational programs $\{1,2,3,4,5\}$ & - & Defined \\
 $6$ & Absorbing failure state (rocket removed permanently) & - & Defined \\
 $\bar{\mathcal{L}}$ & Extended state space $\mathcal{L}\cup\{6\}$ & - & Defined \\
 $\phi_h(l)$ & Nominal next-program rule under scenario $h$ & - & Task 1 \\
-$p_{l6}$ & Failure probability during program $l$ (transition to state 6) & - & TBD \\
+$p_{l6}$ & Failure probability during program $l$ (transition to state 6) & - & Baseline per Table~\ref{tab:baseline_params_task2} / mapping in Table~\ref{tab:failure_prob_task2} \\
 $\bar{\mathbf P}^{(h)}$ & Markov transition matrix under scenario $h$ on $\bar{\mathcal{L}}$ & - & Derived \\
 $L(t)$ & Program/state of a rocket at time $t$ & - & Simulated \\
 \multicolumn{4}{l}{\textit{\textbf{Robust scheduling \& replacement}}} \\
@@ -455,13 +455,13 @@ N_{Rock}\cdot Cap_{Rock}
 
 \subsubsection{Cost Model (for Optimization or Result Reporting)}
 The total cost consists of launch cost, elevator electricity cost, annual maintenance, and
-a fixed transfer-system cost:
+an annual fixed transfer-system cost:
 \begin{equation}
 C_{\mathrm{total}} 
 = C_{launch}\cdot N_{Rock} 
 + C_{elec\_unit}\cdot M_{SE}
 + C_{maint}\cdot T
-+ C_{TV\_fixed}.
++ C_{TV\_fixed}\cdot T.
 \end{equation}
 
 \subsection{Closed-Form Solutions for Scenario A and Scenario B}
@@ -535,7 +535,7 @@ C_A =
 C_{launch}\cdot N_{Rock,A}^{*}
 + C_{elec\_unit}\cdot M_{SE}
 + C_{maint}\cdot T_A^{*}
-+ C_{TV\_fixed},
++ C_{TV\_fixed}\cdot T_A^{*},
 \end{equation}
 where $M_{SE}=M_{goal}$ and $T_A^{*}=\max\!\left(\tau_{\text{transit}}+\frac{M_{goal}}{Cap_{SE}},\ \frac{N_{Rock}}{\sum_{s\in\mathcal{S}} c_s}\right)$ is the project duration defined above.
 
@@ -663,7 +663,7 @@ C(N_{Rock}) =
 C_{launch}\cdot N_{Rock}
 + C_{elec\_unit}\cdot M_{SE}
 + C_{maint}\cdot T(N_{Rock})
-+ C_{TV\_fixed}.
++ C_{TV\_fixed}\cdot T(N_{Rock}).
 \end{equation}
 
 ---
@@ -1132,7 +1132,7 @@ trajectory-wise constant approximation for clarity.)
 Let $t$ be the global clock and $t_{\text{prev}}$ the previous event time. Between events, inventory increases
 deterministically with the elevator transit lag:
 \[
-S(t)\leftarrow S(t_{\text{prev}}) + Cap_{SE}^{\text{eff}}\cdot \bigl((t-t_{\text{prev}})-\tau_{\text{transit}}\bigr)_+,
+S(t)\leftarrow S(t_{\text{prev}}) + Cap_{SE}^{\text{eff}}\cdot \Bigl((t-\tau_{\text{transit}})_+ - (t_{\text{prev}}-\tau_{\text{transit}})_+\Bigr),
 \]
 where $(\cdot)_+=\max(\cdot,0)$; this enforces zero Apex inflow until the ground-to-apex travel time
 $\tau_{\text{transit}}$ (about 14 days) has elapsed.
@@ -1292,7 +1292,7 @@ set $S(0)=0$, choose $Cap_{SE}^{\text{eff}}$ (Scenario~1/3), and set $t_{\text{s
 Repeat until $M(t)\ge M_{\text{goal}}$:
 \begin{enumerate}
 \item Advance time to next event $t\leftarrow \min_r T_r(t)$ and update inventory with transit lag
-$S(t)\leftarrow S(t_{\text{prev}})+Cap_{SE}^{\text{eff}}\bigl((t-t_{\text{prev}})-\tau_{\text{transit}}\bigr)_+$, $t_{\text{prev}}\leftarrow t$.
+$S(t)\leftarrow S(t_{\text{prev}})+Cap_{SE}^{\text{eff}}\Bigl((t-\tau_{\text{transit}})_+-\bigl(t_{\text{prev}}-\tau_{\text{transit}}\bigr)_+\Bigr)$, $t_{\text{prev}}\leftarrow t$.
 \item Let $r$ be the rocket completing Program $l=L_r(t)$. Sample $L_r^+$ from $\bar{\mathbf P}^{(h)}$.
 \item If $L_r^+=6$, set $T_r(t^+)=+\infty$ and issue $D(t)$ replacement orders; each order is inserted via the
 launch-slot server after latency $\delta$.
@@ -1600,7 +1600,7 @@ C_{\text{water}} =
 C_{launch}\cdot N_{\text{water}}
 + C_{elec\_unit}\cdot M_{\text{SE,water}}
 + C_{maint}\cdot 1
-+ C_{TV\_fixed}.
++ C_{TV\_fixed}\cdot 1.
 \end{equation}
 
 \paragraph{Definition of $M_{\text{SE,water}}$.}
