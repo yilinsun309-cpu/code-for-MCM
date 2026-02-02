@@ -1,135 +1,1687 @@
-\documentclass[12pt]{article}
-\usepackage[UTF8]{ctex}        % 兼容中英混排
-\usepackage{geometry}
-\usepackage{graphicx}
-\usepackage{booktabs}
-\usepackage{longtable}
-\usepackage{amsmath, amssymb}
-\usepackage{hyperref}
-\usepackage{enumitem}
-\usepackage{caption}
-\geometry{a4paper, margin=1in}
-\setlength{\parskip}{0.6em}
+\documentclass{mcmthesis}
+\mcmsetup{CTeX = false,   % 使用 CTeX 套装时，设置为 true
+        tcn = 2609427, problem = B,
+        sheet = true, titleinsheet = true, keywordsinsheet = true,
+        titlepage = false, abstract = true}
+% \usepackage{newtxtext,newtxmath}
+\usepackage{palatino}
+\usepackage{lipsum}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{subfig}
+\usepackage{mdframed}
+% \usepackage{amsmath}
+% \usepackage{hyperref}
+\usepackage{indentfirst}
 \setlength{\parindent}{2em}
-\captionsetup{font=small}
+\makeatletter
+\renewcommand\@cite[1]{\textsuperscript{[#1]}}
+\makeatother
 
-\title{\textbf{月球殖民运输方案的多情景建模与可靠性分析}\\[0.3em]MCM/ICM Problem B 2026}
-\author{Team \#2609427}
-\date{2026 年 2 月 2 日}
+\title{Your Paper's Title(SHUMOJIAYOUZHAN)}
+% 这一段是备忘录部分，如果题目没有让写备忘录 或者书信 可以不要
+% \author{\small \href{http://www.latexstudio.net/}
+%   {\includegraphics[width=7cm]{mcmthesis-logo}}}
+% \date{\today}
+
+%  \memoto{\LaTeX{}studio}
+% \memofrom{Liam Huang}
+% \memosubject{Happy \TeX{}ing!}
+% \memodate{\today}
+% %\memologo{\LARGE I'm pretending to be a LOGO!}
 
 \begin{document}
-\maketitle
-
 \begin{abstract}
-本文围绕月球 10 万人基地建设与补给的运输方案，对纯太空电梯、纯火箭以及混合方案进行定量评估。我们首先基于运载质量、发射频率与容量等约束构建质量与成本模型，并给出纯电梯与纯火箭的封闭解；随后通过加权多目标优化确定混合方案的最优运载比例。在此基础上，提出非理想工况下的可靠性模型，采用吸收马尔可夫链与离散事件仿真（DES）描述火箭失效、库存耦合与替换延迟。模型输出涵盖完成时间、累计算质、燃料成本与失效率等指标，可为 MCM 决策提供时间–成本–风险三维权衡。关键词：太空电梯；月球基地；运输优化；马尔可夫链；蒙特卡洛。
-\end{abstract}
+\lipsum[1]
 
-\tableofcontents
+\begin{keywords}
+keyword1; keyword2
+\end{keywords}
+\end{abstract}
+\maketitle
+%% Generate the Table of Contents, if it's needed.
+ \tableofcontents
+ \newpage
+%%
+%% Generate the Memorandum, if it's needed.
+
+
+%%\section为一级标题，\subsection为二级标题 \subsubsection为三级标题
 
 \section{Introduction}
 \subsection{Problem Background}
-人类扩展带来资源枯竭与环境压力，月球因邻近与深空门户地位成为首选据点。计划在 2050 年前建成 10 万人基地，材料需求约 $10^8$ 吨，需持续供水。地面传统火箭（年运力约 7.8 万吨）将耗时数千年；假设电梯单港年运力 17.9 万吨，三港协同可达 53.7 万吨，可大幅缩短周期并减少燃耗与污染。然而，缆索维护、系统失效与在轨交付的不确定性仍是主要风险。
+As human civilization expands, Earth's fragile ecosystems face severe pressures from population surges, resource depletion, and environmental degradation, driving a resurgence in space exploration. The Moon, with its proximity advantage and potential as a gateway to deep space, emerges as the foremost candidate for permanent settlement.
+The space elevator system, a revolutionary infrastructure, utilizes electrically powered graphene cables (with a strength of 130 GPa) to efficiently transport materials from equatorial ground ports to geostationary orbit (GEO) and the top anchor point. Each port has an annual transport capacity of 179,000 metric tons, with three ports synergistically reaching 537,000 metric tons—reducing fuel consumption and pollution by 90% compared to rockets.
+The Moon Colonization Management (MCM) agency plans to launch a 100,000-person base by 2050, requiring 100 million tons of materials and sustained water supply. Traditional rockets (with an annual transport capacity of only 78,000 tons) would take millennia to accomplish this, while the space elevator could reduce the timeline to decades. However, challenges in cable maintenance and system reliability must be addressed.
+This paper evaluates pure elevator, pure rocket, and hybrid solutions using Markov failure analysis to assess cost, time, reliability, and environmental impact, providing MCM with optimal logistics decision-making.
 
-\subsection{Problem Restatement}
-本研究旨在：\begin{itemize}[leftmargin=2em]
-  \item 建立覆盖纯电梯、纯火箭与混合方案的成本–时间评估模型，满足大规模建设与长期补给需求；
-  \item 将部件失效、发射中断等不确定性纳入，评估对整体进度与成本的影响；
-  \item 通过敏感性分析识别关键参数（载荷能力、运输速率、失效概率、环境影响），检验方案稳健性。
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.48\textwidth]{ChatGPT Image 2026年1月30日 19_30_25.tiff}
+    \hfill
+    \includegraphics[width=0.48\textwidth]{mendenhall_glacier_retreat_map.jpg}
+    
+    \vspace{0.5em}
+    
+    \includegraphics[width=0.8\textwidth]{juneau_tourism_concerns_chart.jpg}
+    \caption{Retreat of Mendenhall Glacier and tourism-related concerns from Juneau residents}
+    \label{fig:mendenhall_retreat}
+\end{figure}
+
+
+
+
+% 下述几种格式的效果可以去PDF里查看应用
+
+  
+\subsection{Problem Restatemen}
+The proposed construction of a large-scale lunar colony represents a critical step in humanity’s long-term expansion into space, yet it also introduces substantial logistical, economic, and environmental challenges. The status quo of Earth-to-Moon transportation technologies demands a systematic solution to balance construction efficiency, long-term sustainability, and environmental responsibility. Based on a comprehensive analysis of the problem context, the objectives of this study are restated as follows:
+
+\begin{itemize}
+\item
+Construct a mathematical model to evaluate the cost and time efficiency of transporting materials from Earth to a lunar colony using different transportation schemes, including space elevator systems, traditional rocket launches, and hybrid approaches. The model should account for large-scale construction demands as well as ongoing supply requirements.
+
+\item
+Incorporate system uncertainties and operational disruptions into the model, such as partial failures of space elevator components or rocket launch inefficiencies, and analyze how these factors affect overall transportation performance, cost, and project timelines.
+
+\item
+Perform a sensitivity analysis to identify the most influential parameters in the transportation system, including payload capacity, transportation rate, failure probability, and environmental impact, and evaluate the robustness of the proposed solutions under varying assumptions.
+\item
+Extend the model to post-construction operations by estimating the annual water demand for a fully operational lunar colony of 100,000 residents and analyzing the additional cost and time required to sustain the population during its first year of habitation.
+\item
+Communicate the results through a policy-oriented recommendation, summarizing model outcomes, comparing alternative transportation strategies, and proposing an optimal plan to support the construction and long-term operation of the lunar colony while minimizing adverse environmental effects on Earth.
 \end{itemize}
 
 \subsection{Our Work}
-\begin{enumerate}[leftmargin=2em]
-  \item 建立任务 1 的质量需求与容量约束模型，推导纯电梯与纯火箭的封闭解；
-  \item 设计混合运输的决策变量与加权多目标优化框架；
-  \item 构建任务 2 的可靠性模型：吸收马尔可夫链描述火箭失效，库存耦合与替换策略通过 DES 评估；
-  \item 输出时间、成本、交付批次、失效率等指标，形成情景对比表。
-\end{enumerate}
 
 \section{Preparation of the Models}
 \subsection{Assumptions}
-\begin{itemize}[leftmargin=2em]
-  \item 电梯与火箭运力、周期、失效率在基线内保持稳定；重大故障按马尔可夫链转移。
-  \item 月球端接收能力充足，不形成瓶颈；在轨补给延迟可忽略。
-  \item 燃料成本与发射成本按单位质量线性估计，用于相对比较而非绝对价格。
-\end{itemize}
 
 \subsection{Notation}
-常用符号示例：$M$（需求质量）、$C_e$（电梯年容量）、$C_r$（火箭单次载荷）、$p_f$（失效概率）、$T$（总工期）、$K$（燃料/发射成本因子）。
+\begin{table}[htbp]
+\centering
+\caption{Notations and Definitions}
+\label{tab:notation}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{clcc}
+\toprule
+\textbf{Symbol} & \textbf{Definition} & \textbf{Unit} & \textbf{Value/Est.} \\
+\midrule
+\multicolumn{4}{l}{\textit{\textbf{Decision Variables}}} \\
+$M_{SE}$ & Total mass transported via Space Elevator system & ton & $\ge 0$ \\
+$N_{Rock}$ & Total number of Falcon Heavy launches & - & Integer \\
+$T$ & Total project duration (Time-to-Completion) & year & $\ge 0$ \\
+\multicolumn{4}{l}{\textit{\textbf{Global Parameters}}} \\
+$M_{goal}$ & Total material mass required for the Moon Colony & ton & $10^8$ \\
+\multicolumn{4}{l}{\textit{\textbf{Cost \& Capacity Parameters}}} \\
+$C_{launch}$ & Cost per single Falcon Heavy launch & USD & $1.5 \times 10^8$ \\
+$C_{elec\_unit}$ & Electricity cost per ton via Space Elevator & USD/ton & $4.15^*$
+\\
+$C_{maint}$ & Annual maintenance cost for SE system & USD/yr & $1.2 \times 10^8$ \\
+$C_{TV\_fixed}$ & Fixed cost for Apex-to-Moon Transfer system & USD/yr & $3.0 \times
+10^8$\\
+\multicolumn{4}{l}{\textit{\textbf{Rate Constraints}}} \\
+$Cap_{SE}$ & Annual capacity of the Space Elevator system & ton/yr & $5.37 \times
+10^5$ \\
+$Cap_{Rock}$ & Payload capacity of a single rocket launch & ton & 125 \\
+$f_{total}$ & Max. annual Earth launch frequency (all sites combined) & launches/yr 
+& Data-driven \\
+$f_{cycle}$ & Max. round-trips per rocket per year (apex-to-Moon) & cycles/yr & $
+\approx 60^\dagger$ \\
+\bottomrule
+\end{tabular}
+\vspace{0.2cm}
+\footnotesize
+\\ \textit{*Note: $C_{elec\_unit}$ is derived from the weekly energy consumption ($E_{week}
+$) and annual elevator throughput.} \\
+\textit{$^\dagger$Note: $f_{cycle}$ corresponds to a 6-day round trip cycle (approximately 
+$365/6$ per year).}
+\caption{Additional Notations for Task 2 (Non-Ideal Conditions)}
+\label{tab:notation_task2}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{clcc}
+\toprule
+\textbf{Symbol} & \textbf{Definition} & \textbf{Unit} & \textbf{Value/Est.} \\
+\midrule
+\multicolumn{4}{l}{\textit{\textbf{Stochastic Programs \& Markov Model}}} \\
+$\mathcal{L}$ & Set of operational programs $\{1,2,3,4,5\}$ & - & Defined \\
+$6$ & Absorbing failure state (rocket removed permanently) & - & Defined \\
+$\bar{\mathcal{L}}$ & Extended state space $\mathcal{L}\cup\{6\}$ & - & Defined \\
+$\phi_h(l)$ & Nominal next-program rule under scenario $h$ & - & Task 1 \\
+$p_{l6}$ & Failure probability during program $l$ (transition to state 6) & - & TBD \\
+$\bar{\mathbf P}^{(h)}$ & Markov transition matrix under scenario $h$ on $\bar{\mathcal{L}}$ & - & Derived \\
+$L(t)$ & Program/state of a rocket at time $t$ & - & Simulated \\
+\midrule
+\multicolumn{4}{l}{\textit{\textbf{Robust Scheduling \& Replacement}}} \\
+$I(t)$ & Number of active rockets at time $t$ & rockets & Simulated \\
+$I_{\text{safe}}$ & Safety threshold for active fleet size & rockets & From Task 1 \\
+$R(t)$ & Replacement (relaunch) decision at time $t$ & rockets & Policy \\
+$\delta$ & Replacement latency (delay before replacement becomes available) & day/yr & TBD \\
+$\Delta \tau$ & Time buffer added to absorb disruptions & day/yr & Tuned \\
+$\eta_{\text{pack}}$ & Packing efficiency for water (net water per nominal payload) & - & $0.8\sim 1.0$ \\
+$\kappa_{\text{svc}}$ & Water handling service-time multiplier & - & $1.0\sim 1.5$ \\
+\midrule
+\multicolumn{4}{l}{\textit{\textbf{Failure Loss (Optional)}}} \\
+$c_l^{\text{loss}}$ & Cost/loss incurred if failure occurs during program $l$ & USD & TBD \\
+\bottomrule
+\end{tabular}
+\end{table}
 
+                                                                               
 \subsection{Data Preparation}
-参考给定运力（电梯 17.9 万吨/港$\cdot$年、火箭年 7.8 万吨）、三港并行能力、以及基地材料总需求 $10^8$ 吨；失效率与替换时间来自任务二数据表，可按情景更新。
+\begin{figure}[h]
+\small
+\centering
+\includegraphics[width=12cm]{figures/图片/图片1.jpg}
+\caption{aa} \label{fig:Launch frequency at various rocket launch sites}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\caption{Launch-Site-Level Forecast and Average Launch Interval in 2050 (Aggressive Extrapolation Scenario)}
+\label{tab:launch_forecast_interval_2050}
+\begin{tabular}{lcccc}
+\hline
+\textbf{Launch Site} & \textbf{2025} & \textbf{2050 Forecast} & \textbf{Avg. Interval} & \textbf{Unit} \\
+\hline
+Alaska (USA) & 0 & 10 & $\sim$36.5 & days \\
+Florida (USA) & 109 & 2300 & $\sim$0.16 & days \\
+California (USA) & 71 & 950 & $\sim$0.38 & days \\
+Texas (USA) & 3 & 190 & $\sim$1.92 & days \\
+Virginia (USA) & 1 & 70 & $\sim$5.2 & days \\
+Mahia (New Zealand) & 17 & 140 & $\sim$2.6 & days \\
+Taiyuan (China) & 12 & 100 & $\sim$3.7 & days \\
+Satish Dhawan (India) & 5 & 35 & $\sim$10.4 & days \\
+Kazakhstan (Baikonur) & 6 & 25 & $\sim$14.6 & days \\
+French Guiana (Kourou) & 7 & 24 & $\sim$15.2 & days \\
+\hline
+\end{tabular}
+
+\vspace{0.5em}
+\footnotesize
+\textbf{Note:} Average launch interval is calculated as 365 divided by the annual launch frequency.
+Values below one day indicate multiple launches per day on average.
+This table reflects an upper-bound scenario assuming unconstrained high growth.
+\end{table}
+
+
+
+To model the long-term reduction in launch cost, an experience-curve-based exponential decay model is adopted. In the aerospace industry, a well-established empirical rule suggests that unit cost decreases by approximately 15--20\% with each doubling of cumulative production. This learning effect is captured by the following formulation:
+\begin{equation}
+Cost(t) = C_{0}\exp\left[-k(t-t_{0})\right],
+\end{equation}
+where $C_{0}$ denotes the baseline expendable launch cost and $k$ represents the learning rate associated with increased production scale and operational maturity. Using a reference cost of $C_{0}=\$150$ million and calibrating the model over a 24-year horizon, the parameter $k$ is selected as $k\approx0.096$, which lies within the commonly accepted range $0.05 \le k \le 0.10$. Under this calibration, the model yields an average single-launch cost of approximately \$15 million, corresponding to an order-of-magnitude reduction relative to the expendable baseline. This value is consistent with an aggressive scenario characterized by full reusability, high launch cadence, and mature operational efficiency, and is therefore adopted as the model-implied marginal launch cost in subsequent analyses.
+
+\begin{table}[h!]
+\centering
+\caption{Falcon Heavy--Class Launch Cost Model Inputs (Assumption Set)}
+\label{tab:fh_inputs_no_year}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Parameter} & \textbf{Real-World Reference} & \textbf{Model Input} & \textbf{Notes} \\
+\midrule
+Single-launch cost &
+$\sim\$150$M (expendable baseline) &
+\textbf{\$15M (average)} &
+Assumes fully mature reuse and scaled operations \\
+
+Payload per launch &
+$\sim$20 t (TLI reference) &
+\textbf{125 t (average)} &
+Strictly follows the problem statement \\
+
+Reuse lifetime &
+$<20$ flights &
+\textbf{100 flights} &
+Enabled by materials/thermal protection advances \\
+
+Propellant type &
+RP-1 (kerosene) &
+\textbf{Methalox (CH$_4$/LOX)} &
+Lower coking $\Rightarrow$ lower refurbishment cost \\
+
+\bottomrule
+\end{tabular}
+\end{table}
 
 \section{Model}
-\subsection{Model 1：运力与成本模型}
-\paragraph{Mass Requirement} 以总需求 $M$ 与年/次运力推算最短工期 $T_{\min}$，并考虑运输效率折减系数。
-\paragraph{Space Elevator Capacity Constraint} $T \ge \frac{M}{n_e C_e}$，其中 $n_e$ 为电梯端口数量。
-\paragraph{Rocket Launch Frequency Constraint} 发射频次 $f_r$ 限制火箭年运力：$C_r^{\text{year}} = f_r \cdot C_r$。
-\paragraph{Orbital Fleet Throughput} 顶端–月球循环火箭队列以周转时间确定在轨吞吐。
-\paragraph{Fleet Sizing \& Safety Threshold} 设置安全冗余 $I_{\text{safe}}$，保证交付连续性。
-\paragraph{Scenario-Specific Delivered Mass} 给出纯电梯、纯火箭与混合方案的交付量表达式。
-\paragraph{Cost Model} 成本由燃料、维护、延迟罚金等加权组成，用于优化或报告。
+\subsection{Model 1}
+Scenario A: Space Elevator–Dominated Transportation System (Pure Elevator Scenario)
 
-\subsection{Closed-Form Solutions}
-\subsubsection{Scenario A: Pure Space Elevator}
-当 $n_e=3$ 时，工期约为 $T_A = \dfrac{M}{3C_e}$；成本主要为维护与电能，忽略燃料。
-\subsubsection{Scenario B: Pure Rocket}
-工期 $T_B = \dfrac{M}{f_r C_r}$，成本随发射次数线性上升；环境影响最大。
+In this scenario, all construction materials required for the lunar settlement are first transported from the Earth’s surface to the orbital anchor point via the Galactic Harbour space elevator system. The elevator provides a continuous and pollution-free logistics channel from Earth to orbit, operating at a fixed annual throughput determined by its design capacity.
 
-\subsection{Hybrid Transportation Optimization}
-\paragraph{Decision Variable} 设 $\alpha$ 为电梯分摊比例，则火箭承担 $(1-\alpha)M$。
-\paragraph{Effective Rate \& Duration} $T(\alpha)=\max\!\Big(\dfrac{\alpha M}{3C_e},\,\dfrac{(1-\alpha)M}{f_r C_r}\Big)$。
-\paragraph{Cost Model} $J(\alpha)=w_t T(\alpha)+w_c C(\alpha)+w_e E(\alpha)$。
-\paragraph{Optimization} $\min_{\alpha\in[0,1]} J(\alpha)$，可附约束 $\alpha_{\min}\le\alpha\le\alpha_{\max}$。
+After the initial deployment phase, transport rockets are permanently stationed in orbit and no longer return to Earth. Each rocket is initially launched from the Earth’s surface without payload and transferred to the orbital anchor point, where it enters a repetitive operational cycle. In each cycle, a rocket loads materials delivered by the space elevator at the anchor point, transports them to the lunar settlement, unloads the payload, and then returns to the anchor point for the next loading operation. All subsequent material transfers between Earth and the Moon are therefore completed through the combined operation of the space elevator (Earth to anchor point) and the orbital rocket fleet (anchor point to Moon).
 
-\subsection{Model 2：非理想工况可靠性}
-\begin{itemize}[leftmargin=2em]
-  \item \textbf{Failure-State Definition}：火箭发射/在轨/着陆多个阶段的吸收状态与转移概率。
-  \item \textbf{Scenario Rules}：按情景设定名义交付节奏（交付批次、失败次数阈值）。
-  \item \textbf{Markov Chain}：转移矩阵 $P$ 映射至失效率、平均停机时间。
-  \item \textbf{Inventory Coupling}：电梯端库存不足触发补发；顶端/月面库存与交付节奏耦合。
-  \item \textbf{DES Routine}：事件驱动仿真，处理发射、失效、替换、库存更新，输出完成时间、失效次数、最终火箭数、扩编年数等。
-  \item \textbf{Monte Carlo}：重复试验估计均值与方差，校验稳定性。
-\end{itemize}
+Under this scenario, rockets are used exclusively for cislunar transportation and do not perform repeated Earth surface launches. As a result, the transportation system avoids the high fuel consumption and environmental impact associated with frequent atmospheric launches. The overall delivery rate to the Moon is jointly constrained by the elevator’s upward transport capacity and the total carrying capacity of the orbital rocket fleet.\\
+Scenario B: Conventional Rocket-Based Transportation System (Pure Rocket Scenario)
 
-\section{Validating the Model}
-\begin{itemize}[leftmargin=2em]
-  \item 与任务一封闭解对比：混合方案在 $\alpha^{*}$ 附近应给出时间与成本折衷。
-  \item 与仿真基准对比：DES 输出的交付时间与失效率应与手算近似一致。
-  \item 敏感性分析：对 $p_f$、$f_r$、$C_e$ 等参数微调，观察工期与成本弹性。
-\end{itemize}
+In the pure rocket scenario, all materials required for lunar base construction are transported directly from the Earth’s surface to the Moon using conventional launch vehicles. Each transportation cycle consists of a fully loaded rocket launch from a ground-based launch site, insertion into a translunar trajectory, delivery of payload to the lunar settlement, and a return flight to the original launch site.
 
-\section{Conclusions}
-\begin{itemize}[leftmargin=2em]
-  \item 三种方案各有侧重：纯电梯成本低但可靠性敏感，纯火箭成本高周期长，混合方案平衡二者。
-  \item 可靠性提升手段：增加备份火箭、优化库存门槛、缩短替换延迟。
-  \item 后续工作：耦合环境影响与生命周期成本、完善月面接收与建造节奏模型。
-\end{itemize}
+Rockets repeatedly execute the complete launch–transport–return cycle throughout the project duration until all required materials have been delivered. No orbital infrastructure, such as a space elevator or an anchor-point logistics hub, is utilized in this scenario. Consequently, every transportation task requires overcoming Earth’s gravitational well from the surface, leading to substantial fuel consumption and high operational costs per delivery.
 
-\section{Strengths and Weaknesses}
-\textbf{Strengths}：结构清晰、兼顾封闭解与仿真、考虑非理想可靠性。\par
-\textbf{Weaknesses}：参数精度受限；尚未细化月面建造约束与供应链延迟。
+While this approach benefits from a relatively simple system architecture and does not require the construction or maintenance of orbital facilities, its overall transportation efficiency is limited by launch frequency, fuel requirements, and the cumulative cost of repeated Earth-based launches. The total delivery rate to the lunar settlement is determined by the annual number of launches and the payload capacity of each rocket.\\[1.2em]
 
-\appendix
-\section{Appendix A: 参数与符号表}
-\begin{longtable}{p{0.25\linewidth}p{0.65\linewidth}}
+Scenario C: Hybrid Space Elevator–Rocket Transportation System (Mixed Scenario)
+
+The hybrid scenario integrates the advantages of both the space elevator and conventional rockets by dividing the transportation process into two operational phases. In the initial phase, rockets are launched from the Earth’s surface with full payloads and deliver materials directly to the lunar settlement. After completing this first delivery, instead of returning to Earth, these rockets are transferred to the orbital anchor point and retained in orbit as part of a permanent transportation fleet.
+
+In the second phase, the retained rockets operate in a closed-loop cislunar logistics cycle. Materials are continuously transported from the Earth’s surface to the orbital anchor point by the space elevator, where they are loaded onto the orbiting rockets. Each rocket then transports the payload from the anchor point to the Moon and returns to the anchor point empty, ready for the next cycle. This process is repeated until all remaining materials required for lunar base construction have been delivered.
+
+By allowing rockets to perform a single Earth-based launch before transitioning to orbital operations, the hybrid scenario reduces the number of costly and fuel-intensive surface launches while maintaining a flexible and scalable transportation capacity. The system’s performance depends on the balance between the space elevator’s supply rate and the number of rockets retained in orbit, enabling a trade-off between total transportation time and overall launch cost. \\[1.2em]                                                                
+The following are definitions for various status:\\[1.2em]
+(1) Launch the empty rocket from the ground to the top anchor point of Galaxy Port, or transport rocket components via the Galaxy Port elevator to the top anchor point for assembly;\\
+(2) Launch the fully loaded rocket from the ground into the Earth-Moon transfer orbit;\\
+(3) Depart the fully loaded rocket from the Earth-Moon transfer orbit to the lunar colony for unloading;\\
+(4) Empty rocket is retrieved from the lunar colony and returned to the top anchor point of Galaxy Port;\\
+(5) Empty rocket is retrieved from the Earth-Moon transfer orbit and returned to its original launch site.\\[1.2em]
+Based on the above fundamental procedures, the three transport scenarios can be formally described from the operational perspective of a single rocket:
+
+\subsubsection{Mass Requirement}
+The total mass required for constructing the lunar colony is
+\begin{equation}
+M_{goal} = 10^8 \ \text{ton}.
+\end{equation}
+Any feasible transportation plan must satisfy the total delivered mass constraint:
+\begin{equation}
+M_{\mathrm{delivered}} \ge M_{goal}.
+\end{equation}
+
+\subsubsection{Space Elevator Capacity Constraint}
+The total mass transported by the Space Elevator system is bounded by its annual capacity:
+\begin{equation}
+M_{SE} \le Cap_{SE}\cdot T.
+\end{equation}
+
+\subsubsection{Rocket Launch Frequency Constraint (Earth-based)}
+Given the maximum annual launch frequency across all Earth launch sites,
+\begin{equation}
+N_{Rock} \le f_{total}\cdot T.
+\end{equation}
+
+\subsubsection{Orbital Rocket Fleet Throughput (Apex-to-Moon Cycling)}
+Assuming each launched rocket can be retained to operate in orbit and perform at most
+$f_{cycle}$ round trips per year (Apex $\leftrightarrow$ Moon), the upper bound of
+Apex-to-Moon delivered mass is
+\begin{equation}
+M_{\mathrm{Apex\rightarrow Moon}} \le N_{Rock}\cdot f_{cycle}\cdot Cap_{Rock}\cdot T.
+\end{equation}
+\subsubsection{Fleet Sizing and Safety Fleet Threshold $I_{\text{safe}}$}
+\label{sec:fleet_sizing}
+
+In Task~1 (ideal operation), the transportation system is sized to sustain a target
+steady delivery rate without long-term queueing or capacity collapse. This yields a
+\emph{safety fleet threshold} $I_{\text{safe}}$, which will be inherited by Task~2 as the
+baseline fleet size for closed-loop replenishment.
+
+\paragraph{General sizing principle.}
+Let $q=Cap_{Rock}$ denote payload per successful delivery (ton), and let
+$T_{\text{cycle}}^{(h)}$ be the ideal cycle time (year) for one rocket under scenario $h$,
+defined as the sum of ideal program durations along one complete loop.
+If the system is required to sustain a long-run delivery rate $R_{\text{target}}^{(h)}$
+(ton/year), then the minimum fleet size that can support this rate is
+\begin{equation}
+I_{\text{safe}}^{(h)}
+=
+\left\lceil
+\frac{R_{\text{target}}^{(h)}\, T_{\text{cycle}}^{(h)}}{q}
+\right\rceil .
+\end{equation}
+
+\paragraph{Scenario-specific $R_{\text{target}}^{(h)}$ and $T_{\text{cycle}}^{(h)}$.}
+For the elevator-supported cycling (Scenario A and the steady phase of Scenario C),
+the natural target is to \emph{match the elevator supply}:
+\begin{equation}
+R_{\text{target}}^{(A)} = Cap_{SE}.
+\end{equation}
+In addition, one cislunar loop corresponds to programs $(3)\rightarrow(4)\rightarrow(3)$,
+thus
+\begin{equation}
+T_{\text{cycle}}^{(A)} \approx \tau_3+\tau_4,
+\qquad
+\Rightarrow\quad
+I_{\text{safe}}^{(A)}
+=
+\left\lceil
+\frac{Cap_{SE}(\tau_3+\tau_4)}{Cap_{Rock}}
+\right\rceil .
+\end{equation}
+Equivalently, using $f_{cycle}\approx 1/(\tau_3+\tau_4)$ (cycles/year), we recover the Task~1
+steady-state matching condition:
+\begin{equation}
+I_{\text{safe}}^{(A)}
+=
+\left\lceil
+\frac{Cap_{SE}}{f_{cycle}\,Cap_{Rock}}
+\right\rceil .
+\end{equation}
+
+For the Earth-launched cycling (Scenario B), the system throughput is limited by the
+maximum annual launch cadence. A natural target is the \emph{maximum achievable} delivery rate:
+\begin{equation}
+R_{\text{target}}^{(B)} = f_{total}\,Cap_{Rock}.
+\end{equation}
+One full Earth-based loop is $(2)\rightarrow(3)\rightarrow(5)\rightarrow(2)$, hence
+\begin{equation}
+T_{\text{cycle}}^{(B)} \approx \tau_2+\tau_3+\tau_5,
+\qquad
+\Rightarrow\quad
+I_{\text{safe}}^{(B)}
+=
+\left\lceil
+f_{total}\,(\tau_2+\tau_3+\tau_5)
+\right\rceil .
+\end{equation}
+
+For the hybrid scenario (Scenario C), we use the same sizing principle in the steady phase:
+\begin{equation}
+I_{\text{safe}}^{(C)} \approx I_{\text{safe}}^{(A)}
+=
+\left\lceil
+\frac{Cap_{SE}}{f_{cycle}\,Cap_{Rock}}
+\right\rceil ,
+\end{equation}
+while the initial deployment phase is handled by the launch-cadence constraint as in Task~1.
+The resulting $I_{\text{safe}}$ values are treated as \emph{baseline fleet thresholds} in Task~2.
+
+\subsubsection{Scenario-Specific Delivered Mass}
+We formalize the three scenarios via different expressions of $M_{\mathrm{delivered}}$:
+
+\paragraph{Scenario A: Pure Elevator Scenario (Elevator-dominated)}
+All cargo first reaches the orbital anchor point via the Space Elevator, thus the Moon
+delivery is limited by both the elevator supply and orbital cycling capability:
+\begin{equation}
+M_{\mathrm{delivered}}^{(A)} \le \min\Big(M_{SE},\ N_{Rock}\cdot f_{cycle}\cdot Cap_{Rock}\cdot T \Big).
+\end{equation}
+The feasibility requirement becomes
+\begin{equation}
+\min\Big(M_{SE},\ N_{Rock}\cdot f_{cycle}\cdot Cap_{Rock}\cdot T \Big)\ \ge\ M_{goal}.
+\end{equation}
+
+\paragraph{Scenario B: Pure Rocket Scenario (Earth-to-Moon direct launches)}
+All cargo is delivered by Earth-based launches. Each launch delivers at most $Cap_{Rock}$,
+therefore
+\begin{equation}
+M_{\mathrm{delivered}}^{(B)} \le N_{Rock}\cdot Cap_{Rock}.
+\end{equation}
+The feasibility requirement becomes
+\begin{equation}
+N_{Rock}\cdot Cap_{Rock}\ \ge\ M_{goal}.
+\end{equation}
+
+\paragraph{Scenario C: Hybrid Scenario (One-time direct + orbital cycling with elevator supply)}
+In the hybrid design, each rocket performs one Earth-to-Moon delivery at deployment,
+and then participates in the Apex-to-Moon cycling supported by elevator supply.
+Hence, the total delivered mass can be bounded by
+\begin{equation}
+M_{\mathrm{delivered}}^{(C)} \le N_{Rock}\cdot Cap_{Rock} 
+\;+\; \min\Big(M_{SE},\ N_{Rock}\cdot f_{cycle}\cdot Cap_{Rock}\cdot T \Big).
+\end{equation}
+The feasibility requirement becomes
+\begin{equation}
+N_{Rock}\cdot Cap_{Rock} 
+\;+\; \min\Big(M_{SE},\ N_{Rock}\cdot f_{cycle}\cdot Cap_{Rock}\cdot T \Big)
+\ \ge\ M_{goal}.
+\end{equation}
+
+\subsubsection{Cost Model (for Optimization or Result Reporting)}
+The total cost consists of launch cost, elevator electricity cost, annual maintenance, and
+a fixed transfer-system cost:
+\begin{equation}
+C_{\mathrm{total}} 
+= C_{launch}\cdot N_{Rock} 
++ C_{elec\_unit}\cdot M_{SE}
++ C_{maint}\cdot T
++ C_{TV\_fixed}.
+\end{equation}
+
+\subsection{Closed-Form Solutions for Scenario A and Scenario B}
+
+Scenarios A and B admit direct analytical solutions because their logistics
+chains contain no internal trade-off once feasibility is enforced. In this
+section, we derive the minimum completion time and the corresponding resource
+requirements under each scenario.
+
+\subsubsection{Scenario A: Pure Space Elevator Scenario}
+
+In Scenario A, all payload must be transported from the Earth surface to the
+orbital anchor point by the Space Elevator system, and then delivered to the
+Moon by the orbital rocket fleet. Therefore, the elevator-delivered mass must
+cover the entire requirement:
+\begin{equation}
+M_{SE} = M_{goal}.
+\end{equation}
+
+The Space Elevator capacity constraint implies
+\begin{equation}
+M_{SE} \le Cap_{SE}\cdot T,
+\end{equation}
+which yields the elevator-limited lower bound on completion time:
+\begin{equation}
+T_{\text{elev}}^{(A)} = \frac{M_{goal}}{Cap_{SE}}.
+\end{equation}
+
+However, Scenario A also requires an initial deployment phase in which rockets are
+launched \emph{empty} from Earth to the apex anchor. Given the maximum annual launch
+frequency $f_{total}$, deploying $N_{Rock}$ rockets requires at least
+\begin{equation}
+T_{\text{deploy}}^{(A)}=\frac{N_{Rock}}{f_{total}}.
+\end{equation}
+
+Therefore, the total project duration in Scenario A is approximated by the slower
+process between elevator supply and rocket deployment:
+\begin{equation}
+T_A^{*}=\max\!\left(T_{\text{elev}}^{(A)},\ T_{\text{deploy}}^{(A)}\right)
+=\max\!\left(\frac{M_{goal}}{Cap_{SE}},\ \frac{N_{Rock}}{f_{total}}\right).
+\end{equation}
+
+
+To prevent long-term accumulation of cargo at the anchor point, the orbital
+rocket fleet must be able to transport at least as much as the elevator supplies
+over the project horizon. Using the rocket cycling limit $f_{cycle}$ and per-trip
+payload $Cap_{Rock}$, the cumulative Apex-to-Moon transport capacity is
+\begin{equation}
+M_{\mathrm{Apex\rightarrow Moon}} \le N_{Rock}\cdot f_{cycle}\cdot Cap_{Rock}\cdot T.
+\end{equation}
+Feasibility requires $M_{\mathrm{Apex\rightarrow Moon}} \ge M_{SE}$, hence
+\begin{equation}
+N_{Rock}\cdot f_{cycle}\cdot Cap_{Rock}\cdot T_A^{*} \ge M_{goal}.
+\end{equation}
+Substituting $T_A^{*} = M_{goal}/Cap_{SE}$, the required number of rockets is
+bounded by
+\begin{equation}
+N_{Rock} \ge \frac{Cap_{SE}}{f_{cycle}\cdot Cap_{Rock}},
+\end{equation}
+and thus the minimal integer solution is
+\begin{equation}
+N_{Rock,A}^{*}=
+\left\lceil
+\frac{Cap_{SE}}{f_{cycle}\cdot Cap_{Rock}}
+\right\rceil.
+\end{equation}
+
+Finally, the total cost under Scenario A can be evaluated by the unified cost
+model:
+\begin{equation}
+C_A =
+C_{launch}\cdot N_{Rock,A}^{*}
++ C_{elec\_unit}\cdot M_{SE}
++ C_{maint}\cdot T_A^{*}
++ C_{TV\_fixed},
+\end{equation}
+where $M_{SE}=M_{goal}$ and $T_A^{*}=M_{goal}/Cap_{SE}$.
+
+\subsubsection{Scenario B: Pure Rocket Scenario}
+
+In Scenario B, all payload is delivered directly from the Earth surface to the
+Moon by conventional rocket launches. Therefore, the total delivered mass is
+bounded by
+\begin{equation}
+M_{\mathrm{delivered}}^{(B)} \le N_{Rock}\cdot Cap_{Rock}.
+\end{equation}
+Feasibility requires
+\begin{equation}
+N_{Rock}\cdot Cap_{Rock} \ge M_{goal},
+\end{equation}
+which gives the minimum number of launches
+\begin{equation}
+N_{Rock,B}^{*}=
+\left\lceil
+\frac{M_{goal}}{Cap_{Rock}}
+\right\rceil.
+\end{equation}
+
+Given the maximum annual launch frequency $f_{total}$ (all sites combined), the
+launch-count constraint is
+\begin{equation}
+N_{Rock} \le f_{total}\cdot T.
+\end{equation}
+Hence, the minimum feasible completion time is obtained by saturating the launch
+rate:
+\begin{equation}
+T_B^{*}=\frac{N_{Rock,B}^{*}}{f_{total}}.
+\end{equation}
+
+The corresponding total cost under Scenario B is
+\begin{equation}
+C_B =
+C_{launch}\cdot N_{Rock,B}^{*}.
+\end{equation}
+
+\noindent
+Note that Scenario B does not require Space Elevator electricity costs or the
+fixed Apex-to-Moon transfer infrastructure cost because no orbital logistics hub
+is utilized.
+
+\subsection{Optimization of the Hybrid Transportation Scenario}
+
+Unlike Scenarios A and B, which admit direct analytical solutions, Scenario C
+(the Hybrid Space Elevator--Rocket Transportation System) involves an inherent
+trade-off between transportation time and total system cost. Increasing the
+number of deployed rockets accelerates material delivery but incurs higher
+launch and operational costs. Therefore, Scenario C is formulated as a
+bi-objective optimization problem.
+
+\subsubsection{Decision Variable}
+
+The key decision variable in Scenario C is the total number of rockets launched
+from Earth and subsequently retained for orbital cycling:
+\begin{equation}
+N_{Rock} \in \mathbb{Z}_{\ge 0}.
+\end{equation}
+
+Each rocket performs one initial fully loaded Earth-to-Moon delivery during the
+deployment phase and then joins the Apex-to-Moon cyclic transportation supported
+by the Space Elevator system.
+
+---
+
+\subsubsection{Delivered Mass Decomposition}
+
+The total mass delivered directly to the Moon during the deployment phase is
+\begin{equation}
+M_{\text{direct}} = N_{Rock} \cdot Cap_{Rock}.
+\end{equation}
+
+The remaining mass must be supplied via the Space Elevator system:
+\begin{equation}
+M_{SE} = \max\bigl(0,\; M_{goal} - N_{Rock}\cdot Cap_{Rock} \bigr).
+\end{equation}
+
+---
+
+\subsubsection{Effective Transportation Rate and Project Duration}
+
+After deployment, the orbital rocket fleet provides an annual Apex-to-Moon
+transportation capacity of
+\begin{equation}
+R_{\text{rocket}} = N_{Rock}\cdot f_{cycle}\cdot Cap_{Rock}.
+\end{equation}
+
+The Space Elevator system provides an annual supply capacity of $Cap_{SE}$.
+Hence, the effective annual delivery rate during the steady-state phase is
+\begin{equation}
+R(N_{Rock}) = \min\Bigl( Cap_{SE},\; N_{Rock}\cdot f_{cycle}\cdot Cap_{Rock} \Bigr).
+\end{equation}
+
+The time required to complete delivery of the remaining mass is approximated by
+\begin{equation}
+T_{\text{remain}}(N_{Rock}) =
+\frac{M_{SE}}{R(N_{Rock})}.
+\end{equation}
+
+In addition, deploying $N_{Rock}$ rockets from Earth is limited by the maximum
+annual launch frequency $f_{total}$, resulting in a deployment time of
+\begin{equation}
+T_{\text{deploy}}(N_{Rock}) = \frac{N_{Rock}}{f_{total}}.
+\end{equation}
+
+The total project duration is approximated as
+\begin{equation}
+T(N_{Rock}) =
+\max\Bigl( T_{\text{deploy}}(N_{Rock}),\; T_{\text{remain}}(N_{Rock}) \Bigr).
+\end{equation}
+
+---
+
+\subsubsection{Cost Model}
+
+The total system cost for Scenario C consists of rocket launch costs, Space
+Elevator electricity costs, annual maintenance costs, and a fixed transfer
+system cost:
+\begin{equation}
+C(N_{Rock}) =
+C_{launch}\cdot N_{Rock}
++ C_{elec\_unit}\cdot M_{SE}
++ C_{maint}\cdot T(N_{Rock})
++ C_{TV\_fixed}.
+\end{equation}
+
+---
+
+\subsubsection{Weighted-Sum Multi-Objective Optimization}
+
+Scenario C is formulated as a bi-objective minimization problem with objectives
+of minimizing total project duration and total cost:
+\begin{equation}
+\min_{N_{Rock}} \; \bigl( T(N_{Rock}),\; C(N_{Rock}) \bigr).
+\end{equation}
+
+To obtain Pareto-optimal solutions, the weighted-sum method is adopted. The
+normalized scalar objective function is defined as
+\begin{equation}
+J(N_{Rock}) =
+\alpha \frac{T(N_{Rock})}{T_{\text{ref}}}
++
+(1-\alpha)\frac{C(N_{Rock})}{C_{\text{ref}}},
+\quad \alpha \in [0,1],
+\end{equation}
+where $T_{\text{ref}}$ and $C_{\text{ref}}$ are reference values used for
+normalization, chosen as the maximum observed project duration and cost among
+all feasible solutions.
+
+By varying the weight parameter $\alpha$, a set of Pareto-optimal solutions is
+generated, representing different trade-offs between time efficiency and
+economic cost. The final recommended solution may be selected based on practical
+preferences, such as a balanced compromise near the knee point of the Pareto
+frontier.
+
+---
+
+\subsubsection{Feasible Range of the Decision Variable}
+
+To ensure meaningful system operation, the search range of $N_{Rock}$ is bounded
+as follows:
+\begin{equation}
+\left\lceil
+\frac{Cap_{SE}}{f_{cycle}\cdot Cap_{Rock}}
+\right\rceil
+\;\le\;
+N_{Rock}
+\;\le\;
+\left\lceil
+\frac{M_{goal}}{Cap_{Rock}}
+\right\rceil.
+\end{equation}
+
+The lower bound guarantees that the orbital rocket fleet is capable of matching
+the Space Elevator supply rate, while the upper bound corresponds to delivering
+all required mass through direct Earth-to-Moon launches.
+
+\subsection{Model 2: Reliability Model under Non-Ideal Operations}
+\label{sec:model2}
+% =========================
+% Task 2: add baseline failure/hazard parameters (ready-to-paste)
+% Recommended insertion point:
+% After Table~\ref{tab:failure_prob_task2} in Section~\ref{sec:model2_param}
+% =========================
+
+\subsubsection{Baseline Failure/Hazard Parameters for Task~2}
+\label{sec:model2_baseline_params}
+
+To make the non-ideal operation model operational and reproducible, we provide a
+set of baseline failure/hazard parameters that can be directly used in the absorbing
+Markov model (rocket failures) and the effective-availability model (space elevator disruptions).
+
+\paragraph{Rocket-side baseline probabilities (per operation).}
+We adopt a conservative, PRA-style baseline for launch-stage and docking risks.
+A NASA launch-and-assembly reliability study reports that a Futron-based expected
+Atlas~V (401) failure rate due to propulsion and separation events is $1.78\times 10^{-2}$,
+including the Centaur upper stage risk; subtracting the Centaur contribution
+$1.2\times 10^{-2}$ yields a core-stage analog failure rate $5.87\times 10^{-3}$.
+The same NASA study also documents ESAS point estimates for automated docking
+failure probability ($1$ in $97$) and crew-assisted docking failure probability ($1$ in $230$).
+\cite{nasa_launch_assembly_reliability_2013}
+
+\paragraph{Elevator-side debris-hit process (per time).}
+For the space elevator, untracked small debris in LEO can be modeled as a Poisson
+hit process. An ISEC study indicates that (in a representative LEO segment) an
+untracked debris impact on a tether-scale structure can occur on the order of
+\emph{once every $\sim$10 days}, and tracked debris impacts (without avoidance)
+on the order of \emph{once every $\sim$100 days}. \cite{isec_debris_2010}
+
+\paragraph{Poisson hazard $\rightarrow$ annual disruption probability.}
+Let hits arrive as a Poisson process with rate $\lambda_{\text{hit}}$ (1/day). Then the
+probability of at least one hit in $T$ days is
+\begin{equation}
+\Pr(\ge 1\ \text{hit in }T)=1-e^{-\lambda_{\text{hit}}T}.
+\end{equation}
+If each hit causes a downtime event with conditional probability
+$p_{\text{down}|\text{hit}}$, then an effective downtime-event rate is
+$\lambda_{\text{down}}=\lambda_{\text{hit}}p_{\text{down}|\text{hit}}$ and
+\begin{equation}
+\Pr(\text{downtime event in }T)=1-e^{-\lambda_{\text{down}}T}.
+\end{equation}
+
+\paragraph{Mapping to Markov absorbing probabilities $p_{l6}$.}
+With the event-composition rule
+\begin{equation}
+P_{\text{succ}}=\prod_k(1-p_k),\qquad P_{\text{fail}}=1-P_{\text{succ}},
+\end{equation}
+we keep the Task~2 mapping in Table~\ref{tab:failure_prob_task2} and instantiate the
+baseline values in Table~\ref{tab:baseline_params_task2}.
+
+\begin{table}[htbp]
+\centering
+\caption{Baseline failure/hazard parameters used in Task~2 (with citations).}
+\label{tab:baseline_params_task2}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{lcl}
 \toprule
-符号 & 含义 \\
+\textbf{Parameter} & \textbf{Baseline value} & \textbf{Meaning / Usage} \\
 \midrule
-$M$ & 基地物资总需求质量 \\
-$C_e$ & 单电梯端口年运力 \\
-$C_r$ & 单次火箭载荷 \\
-$f_r$ & 火箭年发射频次 \\
-$p_f$ & 火箭单次发射失效概率 \\
-$I_{\text{safe}}$ & 安全库存门槛 \\
+$p_{\text{launch}}$ & $1.78\times 10^{-2}$ &
+Per-launch failure (propulsion+separation, incl. upper stage) \cite{nasa_launch_assembly_reliability_2013} \\
+$p_{\text{upper}}$  & $1.2\times 10^{-2}$ &
+Upper-stage failure analog (Centaur-class) \cite{nasa_launch_assembly_reliability_2013} \\
+$p_{\text{core}}$   & $5.87\times 10^{-3}$ &
+Core-stage analog after subtracting $p_{\text{upper}}$ \cite{nasa_launch_assembly_reliability_2013} \\
+$p_{\text{dock,auto}}$ & $1/97 \approx 1.03\times 10^{-2}$ &
+Automated rendezvous \& docking failure (ESAS point estimate) \cite{nasa_launch_assembly_reliability_2013} \\
+$p_{\text{dock,crew}}$ & $1/230 \approx 4.35\times 10^{-3}$ &
+Crew-assisted docking failure (ESAS point estimate) \cite{nasa_launch_assembly_reliability_2013} \\
+$p_{\text{land}}$ & $10^{-3}$ &
+Lunar delivery/landing failure placeholder (sensitivity-tested) \\
+\midrule
+$\lambda_{\text{hit,untracked}}$ & $0.1/\text{day}$ &
+Untracked small debris hit rate $\approx$ once per 10 days \cite{isec_debris_2010} \\
+$\lambda_{\text{hit,tracked}}$ & $0.01/\text{day}$ &
+Tracked debris hit rate (no avoidance) $\approx$ once per 100 days \cite{isec_debris_2010} \\
+$p_{\text{down}|\text{hit}}$ & TBD (e.g., $0.1\sim 0.5$) &
+Conditional probability that a hit causes operational downtime \\
+$p_{\text{cat}|\text{hit}}$ & TBD (e.g., $10^{-4}\sim 10^{-2}$) &
+Conditional probability that a hit causes catastrophic failure \\
 \bottomrule
-\end{longtable}
+\end{tabular}
+\end{table}
 
-\section{Appendix B: 仿真流程概述}
-\begin{enumerate}[leftmargin=2em]
-  \item 初始化库存、在轨队列与火箭状态；
-  \item 逐批次模拟发射与到达，按转移矩阵判断失效；
-  \item 达到库存下限时触发补发，记录延迟；
-  \item 统计总工期、累计算质、失效次数与最终在役火箭数。
+\paragraph{Instantiating $p_{l6}$ under Scenario 1/2/3.}
+Using Table~\ref{tab:failure_prob_task2}, we recommend the following baseline substitutions:
+\begin{align}
+p_{26} &= p_{\text{launch}},\\
+p_{16} &= 1-(1-p_{\text{launch}})(1-p_{\text{dock,auto}}),\\
+p_{46} &= 1-(1-p_{\text{return,moon}\rightarrow \text{apex}})(1-p_{\text{dock,auto}}),\\
+p_{56} &= p_{\text{return,earth}},\\
+p_{36} &= p_{\text{land}}.
+\end{align}
+All return-leg risks $p_{\text{return,moon}\rightarrow \text{apex}}$ and $p_{\text{return,earth}}$
+remain scenario inputs and are explored via sensitivity analysis.
+
+\paragraph{Effective elevator availability.}
+If a downtime-event triggers a repair time $T_{\text{repair}}$ (days), then over a long horizon
+the elevator availability can be approximated by
+\begin{equation}
+A_{\text{SE}} \approx \frac{MTBF}{MTBF+MTTR}
+\approx \frac{1/\lambda_{\text{down}}}{1/\lambda_{\text{down}}+T_{\text{repair}}}
+= \frac{1}{1+\lambda_{\text{down}}T_{\text{repair}}},
+\end{equation}
+and the effective elevator supply rate becomes
+$Cap_{SE}^{\text{eff}}=A_{\text{SE}}\,Cap_{SE}$, which is then used in
+Section~\ref{sec:model2_inventory}.
+
+\subsubsection{非完美运行的核心公式与参数映射（可直接套用）}
+\label{sec:model2_nonideal_mapping}
+
+为便于在 Task~2 中快速把“故障/摆动/停机”折算到有效运力和工期，我们给出一组直接可用的公式与缺省参数：
+
+\paragraph{有效运力与可用度耦合。}
+把停机/维修时间纳入可用度 $A$（任意设备或系统均可）
+\begin{equation}
+A=\frac{MTBF}{MTBF+MTTR},\qquad
+Q_{\text{eff}}=Q_0\cdot A\cdot \mathbb{E}[f(\text{state})],
+\end{equation}
+其中 $f(\text{state})\in[0,1]$ 表示运行状态折减（摆动、损伤、限速等）；连续运输近似下的工期为
+\begin{equation}
+T\approx \frac{M_{\text{total}}}{Q_{\text{eff}}}.
+\end{equation}
+
+\paragraph{缆索摆动折减。}
+建议直接使用分段函数
+\begin{equation}
+f_{\text{osc}}(\theta)=
+\begin{cases}
+1, & |\theta|\le \theta_1,\\
+r, & \theta_1<|\theta|\le \theta_2,\\
+0, & |\theta|>\theta_2,
+\end{cases}
+\end{equation}
+其长期平均折减为 $\mathbb{E}[f_{\text{osc}}]=(1-p_1)+r(p_1-p_2)$，其中 $p_i=\Pr(|\theta|>\theta_i)$ 由风场驱动。仿真文献给出的典型量级：$|\theta|\approx0.3^{\circ}\sim0.65^{\circ}$，面内周期约 $5$~day，纵向局部周期约 $6$~h，可作为风场-姿态联合蒙特卡洛的先验范围。
+
+\paragraph{火箭故障对有效载荷的折算。}
+将完全失败/部分失败拆分：
+\begin{equation}
+m_{\text{eff}}=m\bigl(1-p_f-\alpha p_p\bigr),\qquad
+N\approx\left\lceil\frac{M_{\text{total}}}{m_{\text{eff}}}\right\rceil.
+\end{equation}
+吸收“停飞调查”后，名义发射节奏 $c_0$ 的可用度近似为
+\begin{equation}
+\lambda=c_0p_{\text{mishap}},\quad
+A_{\text{rocket}}=\frac{1}{1+\lambda D},\quad
+c_{\text{eff}}=c_0A_{\text{rocket}},\quad
+T\approx \frac{N}{c_{\text{eff}}}.
+\end{equation}
+
+\paragraph{电梯损坏/碎片撞击的泊松建模。}
+将撞击视为泊松过程，年期望撞击次数
+\begin{equation}
+\mu=\int F(d,h)\,A_{\text{proj}}(h)\,dh,\quad
+p(\ge1)=1-e^{-\mu},\quad
+p_{\text{cut}}=1-e^{-\mu_{\text{cut}}},
+\end{equation}
+其中 $F$ 为通量，$A_{\text{proj}}$ 为投影面积。撞击后的运力折减可用分段 $f_{\text{dmg}}\in\{1,\beta,0\}$；把 $p_{\text{down}|\text{hit}}$、$p_{\text{cat}|\text{hit}}$ 接到 $\lambda_{\text{down}}$ 即可进入可用度公式。
+
+\paragraph{可直接抄用的默认参数（情景分析起点）。}
+表~\ref{tab:default_params_task2} 汇总了本节出现的缺省量级，便于直接放入敏感性或蒙特卡洛脚本。
+
+\begin{table}[htbp]
+\centering
+\caption{Task~2 非完美运行默认参数（可作为基线并做区间扫描）}
+\label{tab:default_params_task2}
+\renewcommand{\arraystretch}{1.12}
+\begin{tabular}{lll}
+\toprule
+\textbf{类别} & \textbf{参数/取值} & \textbf{说明} \\
+\midrule
+缆索摆动 & $|\theta|\approx0.3^{\circ}\sim0.65^{\circ}$ & 上行+制动后残余净摆动范围 \\
+ & $P_{\text{osc}}\approx6$~h & 纵向局部周期量级 \\
+ & $P_{\text{in-plane}}\approx5$~day & 面内 libration 周期 \\
+火箭失败 & $p_{\text{mishap}}\approx0.115$ & 2000--2023/01 统计（全口径） \\
+ & $p_{\text{launch}}=1.78\times10^{-2}$ & 发射阶段基线失败率（NASA/ESAS 类比） \\
+ & $p_{\text{land}}=10^{-3}$ & 月面着陆失败率占位 \\
+ & $p_{\text{dock,auto}}=1.03\times10^{-2}$ & 自动交会对接失败 \\
+ & $p_{\text{dock,crew}}=4.35\times10^{-3}$ & 有人/可接管对接失败 \\
+电梯碎片 & $\lambda_{\text{hit,untracked}}=0.1/\text{day}$ & LEO 小碎片命中频度 \\
+ & $\lambda_{\text{hit,tracked}}=0.01/\text{day}$ & LEO 可跟踪碎片命中频度（不规避） \\
+ & $\lambda_{\text{threat,GEO/MEO}}=0.1\sim0.4/\text{yr}$ & GEO/MEO conjunction 威胁频度 \\
+流星雨 & $p_{\text{cat}}=10^{-5}/\text{yr}$ & Leonids 常规峰值导致毁坏概率 \\
+ & $p_{\text{cat,max}}=1.6\times10^{-3}/\text{yr}$ & 2031 级极端事件占位 \\
+参数化 & $r\in(0,1)$, $\theta_1,\theta_2$, $\beta\in(0,1)$ & 折减阈值与限载系数（可灵敏度分析） \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+% =========================
+% Add BibTeX keys (put into your .bib)
+% =========================
+% @techreport{nasa_launch_assembly_reliability_2013,
+%   title={Launch and Assembly Reliability Analysis for ...},
+%   institution={NASA Technical Reports Server (NTRS)},
+%   year={2013},
+%   note={NTRS ID: 20130012764},
+% }
+% @report{isec_debris_2010,
+%   title={The Space Elevator and the Space Debris Environment (Chapter 8)},
+%   institution={International Space Elevator Consortium (ISEC)},
+%   year={2010},
+% }
+
+\subsubsection{Motivation and Modeling Scope}
+\label{sec:model2_scope}
+
+The deterministic logistics model in Task~1 assumes perfect execution of all operations.
+In Task~2, we incorporate non-ideal conditions by modeling \emph{irreversible failures} that permanently
+remove rockets from the active fleet. The objective is to quantify the distribution of completion time,
+failure counts, and the required replacement effort under each scenario, and to evaluate robustness
+relative to the Task~1 baseline.
+
+\subsubsection{Baseline Parameter Inheritance from Task~1}
+\label{sec:model2_inheritance}
+
+Task~2 is constructed as a stochastic extension of Task~1. Therefore, all deterministic quantities under
+ideal operation are inherited as baseline inputs for the non-ideal simulation, including:
+(i) nominal program durations $\{\tau_l\}_{l\in\mathcal{L}}$,
+(ii) nominal payload $q=Cap_{Rock}$,
+and (iii) the steady-state safety fleet threshold $I_{\text{safe}}^{(h)}$ derived in
+Section~\ref{sec:fleet_sizing}. In particular, the replacement controller in Task~2 uses the Task~1
+fleet-sizing result as a reference level:
+\[
+D(t)=\big(I_{\text{safe}}^{(h)}-I(t)\big)_+.
+\]
+All additional parameters introduced in Task~2 (e.g., failure probabilities $p_{l6}$, replacement latency
+$\delta$, and robustness buffer $\Delta\tau$) represent deviations from the Task~1 baseline and are explored
+through sensitivity analysis.
+
+\subsubsection{Program Decomposition and Failure-State Definition}
+\label{sec:model2_programs}
+
+We decompose the rocket operations into the following five programs:
+\begin{align*}
+(1)\ & \text{Rocket (empty): Earth launch site} \rightarrow \text{Apex anchor (deployment)},\\
+(2)\ & \text{Rocket (loaded): Earth surface} \rightarrow \text{TLI staging orbit},\\
+(3)\ & \text{Rocket (loaded): (Apex or TLI)} \rightarrow \text{Moon colony (deliver/land/unload)},\\
+(4)\ & \text{Rocket (empty): Moon} \rightarrow \text{Apex anchor (recovery/docking)},\\
+(5)\ & \text{Rocket (empty): TLI} \rightarrow \text{Earth launch site (return)}.
+\end{align*}
+Let the operational set be $\mathcal{L}=\{1,2,3,4,5\}$.
+
+To represent irreversible failures, we introduce an absorbing failure state $6$.
+If a rocket experiences a critical malfunction during any program $l\in\mathcal{L}$, it enters state $6$ and is
+permanently removed from the transportation system. The extended state space is
+\[
+\bar{\mathcal{L}}=\mathcal{L}\cup\{6\}.
+\]
+For each program $l\in\mathcal{L}$, let $p_{l6}\in[0,1]$ denote the probability that an irrecoverable failure
+occurs during program $l$ and triggers a transition into state $6$.
+
+\subsubsection{Scenario-Dependent Nominal Program Rule}
+\label{sec:model2_phi}
+
+As in Task~1, each transportation scenario $h\in\{1,2,3\}$ induces a deterministic nominal program-transition
+rule $\phi_h:\mathcal{L}\to \mathcal{L}$:
+\begin{align*}
+&\textbf{Scenario 1 (Apex-based cycling after deployment):} &&
+\phi_1(1)=3,\ \phi_1(3)=4,\ \phi_1(4)=3,\\
+&\textbf{Scenario 2 (Earth-launched cycling):} &&
+\phi_2(2)=3,\ \phi_2(3)=5,\ \phi_2(5)=2,\\
+&\textbf{Scenario 3 (Hybrid: one loaded Earth launch then Apex cycling):} &&
+\phi_3(2)=3,\ \phi_3(3)=4,\ \phi_3(4)=3.
+\end{align*}
+Programs not used in a given scenario are not entered under correct initialization. For numerical stability and
+to ensure row-stochastic transition matrices, we assign unused operational states to self-loops.
+
+\subsubsection{Absorbing Markov Transition Model for Rocket Failures}
+\label{sec:model2_markov}
+
+To incorporate non-ideal conditions, the next program is no longer deterministic.
+We model the program evolution of a rocket as a Markov process on $\bar{\mathcal{L}}$.
+Let
+\[
+\bar P^{h}_{ll'}=\mathbb{P}(L^{+}=l'\mid L=l,\ h),\qquad l,l'\in\bar{\mathcal{L}},
+\]
+denote the transition probability from state $l$ to state $l'$ under scenario $h$.
+
+For each operational program $l\in\mathcal{L}$ such that $\phi_h(l)$ is defined, the rocket fails with probability
+$p_{l6}$ and enters absorbing state $6$; otherwise it proceeds to the nominal next program $\phi_h(l)$:
+\[
+\bar P^{h}_{ll'}=
+\begin{cases}
+1-p_{l6}, & l'=\phi_h(l),\\
+p_{l6},   & l'=6,\\
+0,        & \text{otherwise},
+\end{cases}
+\qquad
+\bar P^{h}_{66}=1.
+\]
+
+\paragraph{Explicit matrices (state order $(1,2,3,4,5,6)$).}
+Unused operational states are set to self-loops.
+\[
+\bar{\mathbf P}^{(1)}=
+\begin{pmatrix}
+0 & 0 & 1-p_{16} & 0 & 0 & p_{16}\\
+0 & 1 & 0        & 0 & 0 & 0\\
+0 & 0 & 0        & 1-p_{36} & 0 & p_{36}\\
+0 & 0 & 1-p_{46} & 0 & 0 & p_{46}\\
+0 & 0 & 0        & 0 & 1 & 0\\
+0 & 0 & 0        & 0 & 0 & 1
+\end{pmatrix},
+\]
+\[
+\bar{\mathbf P}^{(2)}=
+\begin{pmatrix}
+1 & 0 & 0        & 0 & 0 & 0\\
+0 & 0 & 1-p_{26} & 0 & 0 & p_{26}\\
+0 & 0 & 0        & 0 & 1-p_{36} & p_{36}\\
+0 & 0 & 0        & 1 & 0 & 0\\
+0 & 1-p_{56} & 0  & 0 & 0 & p_{56}\\
+0 & 0 & 0        & 0 & 0 & 1
+\end{pmatrix},
+\]
+\[
+\bar{\mathbf P}^{(3)}=
+\begin{pmatrix}
+1 & 0 & 0        & 0 & 0 & 0\\
+0 & 0 & 1-p_{26} & 0 & 0 & p_{26}\\
+0 & 0 & 0        & 1-p_{36} & 0 & p_{36}\\
+0 & 0 & 1-p_{46} & 0 & 0 & p_{46}\\
+0 & 0 & 0        & 0 & 1 & 0\\
+0 & 0 & 0        & 0 & 0 & 1
+\end{pmatrix}.
+\]
+
+\subsubsection{Failure Probability Synthesis and Parameter Mapping}
+\label{sec:model2_param}
+
+\paragraph{Event composition (per-operation).}
+If a program consists of independent sub-events with failure probabilities $\{p_k\}$, then
+\[
+P_{\text{succ}}=\prod_k (1-p_k),\qquad
+P_{\text{fail}}=1-P_{\text{succ}}.
+\]
+This rule maps engineering failure modes into the Markov parameters $p_{l6}$.
+
+\paragraph{Baseline mapping to the five programs.}
+We map the dominant risk sources to each program as follows:
+\begin{itemize}
+    \item Program $1$: empty deployment to Apex (launch/insertion + rendezvous/docking).
+    \item Program $2$: loaded Earth launch to TLI (launch/injection).
+    \item Program $3$: loaded delivery leg to Moon (transfer + landing + unloading, aggregated).
+    \item Program $4$: empty recovery from Moon to Apex (ascent/return + rendezvous/docking).
+    \item Program $5$: empty return from TLI to Earth site (return/recovery).
+\end{itemize}
+
+Let $p_{\text{launch}}$ denote per-launch failure probability for a mature heavy-lift-class launch vehicle,
+$p_{\text{dock}}$ the probability of rendezvous/docking failure at the Apex, and $p_{\text{land}}$ the lunar landing/
+delivery failure probability \cite{nasa_launch_reliability,nasa_docking,nasa_landing}.
+
+Under the independence assumption between launch and docking sub-events, we set:
+\[
+p_{16} = 1-(1-p_{\text{launch,empty}})(1-p_{\text{dock}}),
+\qquad
+p_{26} = p_{\text{launch,loaded}},
+\qquad
+p_{36} = p_{\text{land}},
+\]
+\[
+p_{46} = 1-(1-p_{\text{return,moon}\rightarrow \text{apex}})(1-p_{\text{dock}}),
+\qquad
+p_{56} = p_{\text{return,earth}}.
+\]
+In the baseline case, we approximate $p_{\text{launch,empty}}\approx p_{\text{launch,loaded}}\approx p_{\text{launch}}$,
+and keep $p_{\text{return,moon}\rightarrow \text{apex}}$ and $p_{\text{return,earth}}$ symbolic for sensitivity analysis.
+
+\paragraph{Conservative alternative (correlated risk stress-test).}
+If independence is deemed optimistic, a conservative bound can be used:
+\[
+p_{16} = \max\{p_{\text{launch,empty}},\ p_{\text{dock}}\},\qquad
+p_{46} = \max\{p_{\text{return,moon}\rightarrow \text{apex}},\ p_{\text{dock}}\}.
+\]
+
+\paragraph{Representative baseline magnitudes (for simulation).}
+We adopt representative magnitudes as baseline inputs and perturb them over plausible ranges in sensitivity analysis:
+\[
+p_{\text{launch}}=\mathcal{O}(10^{-2}),\qquad
+p_{\text{land}}=\mathcal{O}(10^{-3}),\qquad
+p_{\text{dock}}=\mathcal{O}(10^{-3}\sim 10^{-2}).
+\]
+
+\begin{table}[htbp]
+\centering
+\caption{Failure probability parameters for the absorbing Markov model.}
+\label{tab:failure_prob_task2}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{c l l}
+\toprule
+Program $l$ & Description & Absorbing failure prob. $p_{l6}$ \\
+\midrule
+1 & Empty rocket: Earth $\rightarrow$ Apex (deploy + dock) &
+$1-(1-p_{\text{launch}})(1-p_{\text{dock}})$ \\
+2 & Loaded rocket: Earth $\rightarrow$ TLI (launch/injection) &
+$p_{\text{launch}}$ \\
+3 & Loaded rocket: (Apex or TLI) $\rightarrow$ Moon (deliver/land) &
+$p_{\text{land}}$ \\
+4 & Empty rocket: Moon $\rightarrow$ Apex (return + dock) &
+$1-(1-p_{\text{return,moon}\rightarrow \text{apex}})(1-p_{\text{dock}})$ \\
+5 & Empty rocket: TLI $\rightarrow$ Earth (return/recovery) &
+$p_{\text{return,earth}}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Apex Inventory Coupling for Elevator-Supported Scenarios}
+\label{sec:model2_inventory}
+
+For Scenario~1 and the steady phase of Scenario~3, payloads used in Program~(3) must be supplied by the Space
+Elevator to the Apex anchor. We introduce an Apex inventory state $S(t)$ (ton), representing available cargo
+at the anchor for loading.
+
+\paragraph{Effective elevator supply under non-ideal operations.}
+We model non-ideal elevator operations via an effective supply rate $Cap_{SE}^{\text{eff}}$.
+A simple robustness model draws a downtime ratio $d\in[0,1)$ per Monte Carlo trajectory and sets
+\[
+Cap_{SE}^{\text{eff}}=(1-d)\,Cap_{SE}.
+\]
+(Alternatively, $Cap_{SE}^{\text{eff}}(t)$ can be modeled as a two-state up/down process; we use the
+trajectory-wise constant approximation for clarity.)
+
+\paragraph{Inventory evolution between events.}
+Let $t$ be the global clock and $t_{\text{prev}}$ the previous event time. Between events, inventory increases
+deterministically:
+\[
+S(t)\leftarrow S(t_{\text{prev}}) + Cap_{SE}^{\text{eff}}\cdot (t-t_{\text{prev}}).
+\]
+
+\paragraph{Loading constraint at the Apex.}
+A loaded outbound delivery (Program~3) requires at least one payload unit $q$ in inventory. When a rocket at the Apex
+is ready to start Program~(3), it can only depart after sufficient inventory is available.
+If at time $t$ we have $S(t)<q$, the earliest feasible loading time is
+\[
+t_{\text{load}} = t + \frac{q - S(t)}{Cap_{SE}^{\text{eff}}}.
+\]
+At time $t_{\text{load}}$, we deduct inventory and then execute Program~(3):
+\[
+S(t_{\text{load}}^+) \leftarrow S(t_{\text{load}}) - q.
+\]
+This rule prevents phantom deliveries when the elevator supply is insufficient.
+
+\paragraph{Direct-launch deliveries.}
+For Program~(2)$\rightarrow$(3) deliveries sourced from Earth launches, we do not consume Apex inventory.
+Inventory coupling applies only to Apex-supported departures (Scenario~1 and the steady-state phase of Scenario~3).
+\subsubsection{Cargo-Type Coupling Coefficients (Task 2 $\rightarrow$ Task 3 Bridge)}
+\label{sec:coupling_coeff}
+
+To extend the Task~2 delivery model toward Task~3 (continuous annual water supply),
+we introduce \emph{cargo-type coupling coefficients} that unify the differences between
+bulk construction materials and water logistics in terms of packing efficiency and service time.
+
+\paragraph{(i) Packing / effective payload coefficient.}
+Water requires tanks, interfaces, thermal control, and safety margins, which may reduce the
+\emph{net deliverable water mass} per nominal payload unit.
+Let $\eta_{\text{pack}}\in(0,1]$ denote the packing efficiency, then for a rocket with nominal payload capacity
+$Cap_{Rock}$ (ton), the net water delivered per successful delivery is
+\begin{equation}
+q_{\text{water}}=\eta_{\text{pack}}\cdot Cap_{Rock}.
+\end{equation}
+When $\eta_{\text{pack}}=1$, water is treated as an ordinary bulk commodity.
+
+\paragraph{(ii) Service-time (handling) coefficient.}
+Water loading/unloading may incur additional operations (coupling, leak check, pressurization).
+We model this by inflating the nominal program duration $\tau_l$ using a coefficient
+$\kappa_{\text{svc}}\ge 1$:
+\begin{equation}
+\tau_{l}^{\text{water}}=\kappa_{\text{svc}}\cdot \tau_l,\qquad l\in\mathcal{L}.
+\end{equation}
+This coefficient directly amplifies queueing and waiting effects in the DES, and therefore becomes a
+key lever in Task~3 sensitivity analysis.
+
+\paragraph{Remark.}
+The two coupling coefficients $\eta_{\text{pack}}$ and $\kappa_{\text{svc}}$ are set to $(1,1)$ in the baseline case,
+and perturbed over plausible ranges to quantify the robustness of annual water supply.
+
+\subsubsection{Event-Driven Discrete-Event Simulation (DES)}
+\label{sec:model2_des}
+
+We simulate the fleet evolution using a discrete-event mechanism.
+For each rocket $r$, let $L_r(t)\in\bar{\mathcal{L}}$ denote its current program/state at time $t$,
+and let $T_r(t)\ge t$ be its scheduled completion time.
+
+\paragraph{Stochastic state transition at event times.}
+When rocket $r$ completes its current program $l=L_r(t)\in\mathcal{L}$ at time $T_r(t)$,
+its next state $L_r^{+}$ is sampled according to $\bar{\mathbf P}^{(h)}$:
+\[
+\mathbb{P}(L_r^{+}=l' \mid L_r=l)=\bar P^{h}_{ll'}, \qquad l'\in\bar{\mathcal{L}}.
+\]
+If $L_r^{+}=6$, the rocket is permanently removed from the system.
+
+\paragraph{Time update rule with robustness buffer.}
+Let $\tau_l$ be the nominal duration of program $l\in\mathcal{L}$.
+To reflect conservative scheduling, we inflate each duration by a buffer $\Delta\tau$:
+\[
+\tau_l^{\text{robust}}=\tau_l+\Delta\tau,\qquad l\in\mathcal{L}.
+\]
+After the transition,
+\[
+L_r(t^+) \leftarrow L_r^{+},\qquad
+T_r(t^+) \leftarrow
+\begin{cases}
+T_r(t) + \tau_{L_r^{+}}^{\text{robust}}, & L_r^{+}\in\mathcal{L},\\
++\infty, & L_r^{+}=6.
+\end{cases}
+\]
+Setting $T_r=+\infty$ ensures failed rockets do not participate in future events.
+
+\paragraph{Mass delivery accounting.}
+Let $M(t)$ be the cumulative delivered mass to the Moon colony. Whenever a rocket completes Program~(3),
+the delivered mass increases by payload $q_r$:
+\[
+M(t^+) \leftarrow M(t) + q_r \qquad \text{if Program~3 completes at time }t.
+\]
+The simulation terminates once
+\[
+M(t)\ge M_{\text{goal}},
+\qquad
+T^{*}=\inf\{t:\ M(t)\ge M_{\text{goal}}\}.
+\]
+
+\paragraph{Global clock advancement.}
+The global simulation time advances to the next event:
+\[
+t \leftarrow \min_r T_r(t).
+\]
+
+\subsubsection{Closed-Loop Replacement with Latency and Launch Cadence}
+\label{sec:model2_replacement}
+
+Irreversible failures reduce the active fleet size. Let
+\[
+I(t)=\#\{r:\ L_r(t)\neq 6\}
+\]
+denote the number of active rockets at time $t$.
+We issue replacement orders whenever $I(t)<I_{\text{safe}}^{(h)}$:
+\[
+D(t)=\big(I_{\text{safe}}^{(h)}-I(t)\big)_+.
+\]
+Each replacement order becomes ready after a latency $\delta$, but the actual insertion of new rockets is
+constrained by the maximum annual launch cadence $f_{total}$.
+
+\paragraph{Launch-slot server (cadence constraint).}
+Let $t_{\text{slot}}$ be the next available launch-slot time (initialized $t_{\text{slot}}=0$).
+When a replacement order becomes ready at time $t_{\text{ready}}=t+\delta$, its actual launch start time is
+\[
+t_{\text{start}}=\max\{t_{\text{ready}},\ t_{\text{slot}}\},\qquad
+t_{\text{slot}} \leftarrow t_{\text{start}}+\frac{1}{f_{total}}.
+\]
+
+\paragraph{Scenario-dependent insertion state.}
+A newly inserted rocket enters the scenario-specific first program:
+\[
+l_0^{(1)}=1,\qquad l_0^{(2)}=2,\qquad l_0^{(3)}=2.
+\]
+At $t_{\text{start}}$, we create a new rocket $r_{\text{new}}$ with
+\[
+L_{r_{\text{new}}}(t_{\text{start}}^+)=l_0^{(h)},\qquad
+T_{r_{\text{new}}}(t_{\text{start}}^+)=t_{\text{start}}+\tau_{l_0^{(h)}}^{\text{robust}}.
+\]
+
+\paragraph{Replacement accounting.}
+Let $N_{\text{launch}}$ be the total number of replacement launches executed in Task~2.
+Each insertion increments:
+\[
+N_{\text{launch}} \leftarrow N_{\text{launch}}+1.
+\]
+If Task~2 requires cost reporting, the additional launch cost term can be included as
+$C_{launch}\cdot N_{\text{launch}}$.
+
+\subsubsection{DES Routine with Inventory and Replacement}
+\label{sec:model2_des_routine}
+
+We summarize the complete DES logic:
+
+\paragraph{Initialization.}
+Set $t=0$, $t_{\text{prev}}=0$, $M(0)=0$, choose scenario $h$, initialize $I(0)$ rockets and their initial programs,
+set $S(0)=0$, choose $Cap_{SE}^{\text{eff}}$ (Scenario~1/3), and set $t_{\text{slot}}=0$.
+
+\paragraph{Main loop.}
+Repeat until $M(t)\ge M_{\text{goal}}$:
+\begin{enumerate}
+\item Advance time to next event $t\leftarrow \min_r T_r(t)$ and update inventory
+$S(t)\leftarrow S(t_{\text{prev}})+Cap_{SE}^{\text{eff}}(t-t_{\text{prev}})$, $t_{\text{prev}}\leftarrow t$.
+\item Let $r$ be the rocket completing Program $l=L_r(t)$. Sample $L_r^+$ from $\bar{\mathbf P}^{(h)}$.
+\item If $L_r^+=6$, set $T_r(t^+)=+\infty$ and issue $D(t)$ replacement orders; each order is inserted via the
+launch-slot server after latency $\delta$.
+\item If $L_r^+\in\mathcal{L}$, schedule the next completion time:
+\begin{itemize}
+\item If $L_r^+=3$ and the departure is Apex-supported (Scenario~1 or steady Scenario~3), enforce loading:
+if $S(t)<q$, delay to $t_{\text{load}}=t+(q-S(t))/Cap_{SE}^{\text{eff}}$; deduct $q$ and set
+$T_r=t_{\text{load}}+\tau_3^{\text{robust}}$.
+\item Otherwise set $T_r=t+\tau_{L_r^+}^{\text{robust}}$.
+\end{itemize}
+\item Delivery accounting: whenever Program~3 completes, update $M(t^+)=M(t)+q$.
 \end{enumerate}
 
+\noindent
+This DES guarantees: (i) failed rockets never re-enter; (ii) $M(t)$ is monotone non-decreasing;
+(iii) the global time $t$ strictly increases; (iv) Apex-supported deliveries cannot exceed cumulative elevator supply.
+
+\subsubsection{Monte Carlo Protocol, Outputs, and Verification Checks}
+\label{sec:model2_mc}
+
+Because $T^{*}$ and failure counts are random under the absorbing Markov dynamics, we estimate performance
+statistics via Monte Carlo simulation. We run $N_{\text{MC}}$ independent trajectories, each simulated until
+$M(t)\ge M_{\text{goal}}$.
+
+\paragraph{Key outputs.}
+For each trajectory $n$, record:
+\[
+T^{*(n)},\quad N_{\text{fail}}^{(n)},\quad N_{\text{launch}}^{(n)},\quad
+\max_t \big(I_{\text{safe}}^{(h)}-I(t)\big)_+,
+\]
+and compute sample mean and standard deviation:
+\[
+\overline{T^*}=\frac{1}{N_{\text{MC}}}\sum_{n=1}^{N_{\text{MC}}}T^{*(n)},\qquad
+s_{T}=\sqrt{\frac{1}{N_{\text{MC}}-1}\sum_{n=1}^{N_{\text{MC}}}\left(T^{*(n)}-\overline{T^*}\right)^2 }.
+\]
+A $95\%$ confidence interval for $\mathbb{E}[T^*]$ is approximated by
+\[
+\overline{T^*}\ \pm\ 1.96\frac{s_T}{\sqrt{N_{\text{MC}}}}.
+\]
+
+\paragraph{Implementation verification checks.}
+To ensure correctness of the DES implementation, we enforce:
+\begin{enumerate}
+\item If a rocket enters state $6$, then $T_r(t^+)=+\infty$ and it never contributes to delivery again;
+\item The cumulative delivered mass $M(t)$ is monotone non-decreasing;
+\item The global time $t$ is strictly increasing across events;
+\item For Apex-supported scenarios, the total payload departures from Apex do not exceed the cumulative inventory inflow.
+\end{enumerate}
+
+\paragraph{Remark on parameter sourcing.}
+All baseline probabilities are treated as scenario inputs; their baseline magnitudes are motivated by reliability
+and docking literature \cite{nasa_launch_reliability,nasa_docking,nasa_landing} and then perturbed to quantify
+sensitivity and robustness.
+
+\subsection{Model 3: Supply-Chain Buffer and Stockout-Risk Control for One-Year Water Supply}
+\label{sec:model3_optimal}
+
+\subsubsection{Modeling Goal and Key Shift}
+\label{sec:model3_shift}
+
+Task~3 evaluates the additional logistics required to sustain a 100,000-resident lunar colony during its
+\emph{first operational year}. The central modeling shift is:
+
+\begin{quote}
+\textbf{From ``total mass completion'' (Task~1/2) to ``dynamic balance with stockout risk'' (Task~3).}
+\end{quote}
+
+Instead of computing a completion time for shipping a total water mass, Task~3 asks:
+\emph{How much safety stock must be accumulated, and how early must replenishment begin, to guarantee
+no stockout under queueing and disruptions?}
+
+\subsubsection{Notation for Task 3}
+\label{sec:model3_notation_opt}
+
+To avoid symbol conflicts, we reserve $I(t)$ for the \emph{active rocket fleet size} (Task~2),
+and use $W(t)$ for \emph{Moon-surface usable water inventory}.
+
+\begin{table}[htbp]
+\centering
+\caption{Additional notations for Model 3 (annual water supply).}
+\label{tab:notation_model3_opt}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{clcc}
+\toprule
+\textbf{Symbol} & \textbf{Definition} & \textbf{Unit} & \textbf{Value/Est.}\\
+\midrule
+$N$ & Population & person & $100000$\\
+$d$ & Days in the first operational year & day & $365$\\
+$w_{\text{person}}$ & Per-capita \emph{gross} water use & kg/(person$\cdot$day) & $3.8\sim 9.12$\\
+$r(t)$ & Water recovery rate (possibly time-varying) & -- & $0.94\sim 0.98$\\
+$W_{\text{gross}}$ & Annual gross water demand & ton/yr & computed\\
+$W_{\text{net}}$ & Annual net make-up water (external supply) & ton/yr & computed\\
+$c$ & Daily net consumption rate & ton/day & computed\\
+$W(t)$ & Moon-surface usable water inventory & ton & state\\
+$S_{\text{moon}}$ & Safety stock (initial Moon inventory) & ton & decision\\
+$q_{\text{water}}$ & Net water per successful delivery arrival & ton & $\eta_{\text{pack}}Cap_{Rock}$\\
+$\eta_{\text{pack}}$ & Water packing efficiency (Task~2 coupling) & -- & $0.8\sim 1$\\
+$\kappa_{\text{svc}}$ & Water service-time multiplier (Task~2 coupling) & -- & $1\sim 1.5$\\
+$f_{total}$ & Total Earth launch cadence limit & 1/yr & data-driven\\
+$\delta$ & Replacement latency (Task~2) & day & TBD\\
+$W_q$ & Queueing-induced waiting time (bottleneck) & day & estimated / simulated\\
+$G$ & Delivery drought gap (max inter-arrival or disruption gap) & day & simulated\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsubsection{Demand-Side Estimation with Engineering Justification}
+\label{sec:model3_demand_opt}
+
+We model the demand chain:
+\[
+\text{Gross demand} \rightarrow \text{Recovery} \rightarrow \text{Net make-up}.
+\]
+For constant recovery $r$, the annual quantities are
+\begin{equation}
+W_{\text{gross}}=\frac{N\,d\,w_{\text{person}}}{1000},\qquad
+W_{\text{net}}=W_{\text{gross}}(1-r),\qquad
+c=\frac{W_{\text{net}}}{d}.
+\end{equation}
+
+\paragraph{Justification of benchmarks.}
+NASA reports that each ISS crew member needs about \emph{one gallon of water per day}
+for drinking, food preparation, and basic hygiene, i.e., approximately
+$3.8~\mathrm{kg/(person\cdot day)}$ under $1~\mathrm{kg}\approx 1~\mathrm{L}$
+\cite{nasa_water_milestone_iss}.
+For long-term habitation with complete hygiene capability, NASA BVAD Rev2 reports a mature base
+total water consumption of $9.12~\mathrm{kg/(person\cdot day)}$ (Table~4-20) \cite{bvad_rev2}.
+ISS systems demonstrate overall recovery at $93$--$94\%$ (pre-BPA) and up to $98\%$ (with BPA),
+so we bracket $r\in[0.94,0.98]$ \cite{nasa_water_milestone_iss}.
+
+\subsubsection{Numerical Benchmarks: Explicit $W_{\text{net}}$ and $c$}
+\label{sec:model3_numbers_opt}
+
+With $N=100000$ and $d=365$:
+\begin{itemize}
+\item \textbf{Low-demand (ISS-scale), $w_{\text{person}}=3.8$:}
+$W_{\text{gross}}=138700~\mathrm{ton/yr}$.
+If $r=0.98$, then $W_{\text{net}}=2774~\mathrm{ton/yr}$ and $c=7.6~\mathrm{ton/day}$;
+if $r=0.94$, then $W_{\text{net}}=8322~\mathrm{ton/yr}$ and $c=22.8~\mathrm{ton/day}$.
+
+\item \textbf{High-demand (mature base), $w_{\text{person}}=9.12$:}
+$W_{\text{gross}}=332880~\mathrm{ton/yr}$.
+If $r=0.98$, then $W_{\text{net}}=6657.6~\mathrm{ton/yr}$ and $c=18.24~\mathrm{ton/day}$;
+if $r=0.94$, then $W_{\text{net}}=19972.8~\mathrm{ton/yr}$ and $c=54.72~\mathrm{ton/day}$.
+\end{itemize}
+
+\subsubsection{Core Inventory Model: Continuous Consumption + Discrete Arrivals}
+\label{sec:model3_inventory_opt}
+
+Water is consumed continuously while deliveries arrive in discrete batches.
+Let $t_k$ be the arrival times of successful water deliveries (Program~3 completion for water),
+and $q_k$ their net water quantities. Then
+\begin{equation}
+W(t)=S_{\text{moon}}-c\,t+\sum_{k:\,t_k\le t} q_k,
+\qquad
+W(t)\ge 0,\ \forall t\in[0,d].
+\end{equation}
+We set $W(0)=S_{\text{moon}}$ and treat $S_{\text{moon}}$ as the primary buffer decision variable.
+
+\subsubsection{Queueing Bottlenecks: Why Stockout Risk Cannot Be Averaged Away}
+\label{sec:model3_bottleneck_opt}
+
+Three mechanisms create \emph{delivery drought gaps} that threaten $W(t)\ge 0$:
+
+\begin{enumerate}
+\item \textbf{Launch-slot queue (cadence constraint).}
+Earth launches (including replacement launches) are limited by $f_{total}$, acting as a finite server that induces
+waiting $W_q$ when demand for launches is high.
+
+\item \textbf{Apex loading queue (elevator-supported scenarios).}
+In Scenario~1 and the steady phase of Scenario~3, outbound Program~(3) departures require the Apex inventory
+to accumulate $q_{\text{water}}$ supplied at rate $Cap_{SE}^{\text{eff}}$. If the rocket cycling potential exceeds
+the elevator supply, rockets queue for loading.
+
+\item \textbf{Failure and replacement latency.}
+When failures occur (Task~2 absorbing Markov model), active fleet size decreases and delivery cadence drops.
+Replacements become available only after latency $\delta$ and further launch-slot waiting, generating multi-day
+delivery gaps.
+\end{enumerate}
+
+\subsubsection{Risk Trigger Criterion (Buffer-Day Condition)}
+\label{sec:model3_trigger_opt}
+
+Define the \emph{buffer days} available at time $t$:
+\begin{equation}
+H(t)=\frac{W(t)}{c}.
+\end{equation}
+A conservative stockout-risk trigger is:
+\begin{equation}
+W_q + \delta \ >\ H(t)
+\quad \Rightarrow \quad
+\text{high stockout risk (delivery gap exceeds remaining buffer).}
+\end{equation}
+This criterion explains why safety stock is necessary even when annual totals are feasible:
+stockout is driven by \emph{gaps}, not by averages.
+
+\subsubsection{Analytical Scaling as a Necessary-Condition Filter}
+\label{sec:model3_scaling_opt}
+
+Let $q_{\text{water}}=\eta_{\text{pack}}Cap_{Rock}$ be net water per arrival.
+The average permissible inter-arrival gap is
+\begin{equation}
+\Delta t_{\max}\approx \frac{q_{\text{water}}}{c}.
+\end{equation}
+If the effective delivery mechanism cannot generate arrivals at this time scale, stockout becomes inevitable.
+Moreover, a conservative lower bound for safety stock is
+\begin{equation}
+S_{\text{moon}} \ \gtrsim\ c\cdot\Big(\delta+\Delta t_{\text{queue}}\Big),
+\end{equation}
+where $\Delta t_{\text{queue}}$ is a representative queue-induced delay (launch-slot and/or Apex-loading).
+These analytical expressions provide \emph{search bounds} and \emph{engineering interpretation}, while final feasibility
+is evaluated by simulation.
+
+\subsubsection{Coupling from Task 2: Water Payload and Service-Time Inflation}
+\label{sec:model3_coupling_opt}
+
+Water logistics may require pressurized containment, leak checking, sterility control, and thermal management.
+We capture these effects via coupling coefficients inherited from Task~2:
+
+\begin{equation}
+q_{\text{water}}=\eta_{\text{pack}}Cap_{Rock},
+\qquad
+\tau_l^{\text{water}}=\kappa_{\text{svc}}\tau_l,\ \ l\in\mathcal{L},
+\end{equation}
+with $\eta_{\text{pack}}\in[0.8,1]$ and $\kappa_{\text{svc}}\in[1,1.5]$.
+
+\subsubsection{DES Evaluation: Minimal Extension of Task 2}
+\label{sec:model3_des_opt}
+
+We inherit the event-driven DES of Task~2 (Section~\ref{sec:model2_des_routine}) and add a single inventory state $W(t)$:
+
+\begin{itemize}
+\item \textbf{Time-advance update:} when the global clock advances $t_{\text{prev}}\to t$,
+\[
+W\leftarrow W-c\,(t-t_{\text{prev}}).
+\]
+If $W<0$, stockout occurs and the plan is infeasible.
+
+\item \textbf{Arrival update:} whenever a water delivery arrives (Program~3 completion for water),
+\[
+W\leftarrow W+q_{\text{water}}.
+\]
+
+\item \textbf{All other mechanisms unchanged:} absorbing failures, replacement latency $\delta$, launch-slot cadence,
+and Apex inventory coupling for elevator-supported departures.
+\end{itemize}
+
+The DES outputs the realized delivery gaps, queueing delays, and the minimum inventory $\min_{t\in[0,d]}W(t)$.
+
+\subsubsection{Recovery-Rate Degradation and Edge-Failure Testing}
+\label{sec:model3_recovery_opt}
+
+Recovery efficiency may degrade due to aging, fouling, or subsystem faults. We model this by allowing $r(t)$ to vary.
+A stress-test profile is
+\begin{equation}
+r(t)=\bar r-\Delta r\cdot \mathbf{1}_{t\in[t_a,t_b]},
+\end{equation}
+meaning that during a degraded window $[t_a,t_b]$, recovery drops by $\Delta r$ (e.g., $0.95\to 0.85$).
+This directly increases $c$ and tightens the buffer-day condition in Section~\ref{sec:model3_trigger_opt},
+providing a principled ``edge-failure'' test that couples internal ECLSS degradation with external transport disruptions.
+
+\subsubsection{Risk-Based Safety Stock at Confidence Level}
+\label{sec:model3_confidence_opt}
+
+Let $G$ denote the random \emph{delivery drought gap} (e.g., the maximum inter-arrival time or the longest disruption gap)
+over the year, induced jointly by queueing and failures. To ensure a confidence level $\alpha$ (e.g., $\alpha=0.99$),
+we require
+\begin{equation}
+\mathbb{P}\left(S_{\text{moon}} \ge c\,G\right)\ge \alpha.
+\end{equation}
+Hence the minimal safety stock at confidence level $\alpha$ is
+\begin{equation}
+S_{\text{moon}}^{*}=c\cdot Q_{\alpha}(G),
+\end{equation}
+where $Q_{\alpha}(G)$ is the $\alpha$-quantile of $G$ estimated from Monte Carlo DES trajectories.
+This provides a direct policy interpretation: \emph{Task~3's additional cost is the price of buffering against
+rare but severe supply interruptions.}
+
+\subsubsection{Cost Accounting and Scenario-Specific Elevator Water Mass}
+\label{sec:model3_cost_opt}
+
+Let $N_{\text{water}}$ be the number of successful water arrivals in the year.
+The annual incremental cost is
+\begin{equation}
+C_{\text{water}} =
+C_{launch}\cdot N_{\text{water}}
++ C_{elec\_unit}\cdot M_{\text{SE,water}}
++ C_{maint}\cdot 1
++ C_{TV\_fixed}.
+\end{equation}
+
+\paragraph{Definition of $M_{\text{SE,water}}$.}
+For Scenario~1 (pure elevator-supported cycling): $M_{\text{SE,water}}=W_{\text{net}}$.
+For Scenario~2 (pure rocket): $M_{\text{SE,water}}=0$.
+For Scenario~3 (hybrid): if $N_{\text{direct}}$ direct deliveries occur without taxing the elevator,
+\[
+M_{\text{SE,water}}=\max\{0,\ W_{\text{net}}-N_{\text{direct}}q_{\text{water}}\}.
+\]
+
+\subsubsection{Decision Variables and Outputs}
+\label{sec:model3_output_opt}
+
+We optimize over scenario choice $h\in\{1,2,3\}$ and safety stock $S_{\text{moon}}$ (and optionally $\Delta\tau$),
+with feasibility enforced by $W(t)\ge 0$ over $[0,d]$.
+
+For each candidate, we report:
+\begin{itemize}
+\item feasibility (stockout indicator and stockout duration),
+\item minimum inventory $\min W(t)$ and quantile-based safety stock $S_{\text{moon}}^*$,
+\item queueing statistics ($W_q$, max queue length at launch-slot/Apex),
+\item robustness metrics (failures and replacement launches),
+\item annual incremental cost $C_{\text{water}}$.
+\end{itemize}
+
+
+
+\section{Validating the Model}
+\lipsum[9]
+
+\section{Conclusions}
+\lipsum[6]
+
+\section{A Summary}
+\lipsum[6]
+
+\section{Evaluate of the Mode}
+
+\section{Strengths and weaknesses}
+\lipsum[12]
+
+\subsection{Strengths}
+\begin{itemize}
+\item \textbf{Applies widely}\\
+This  system can be used for many types of airplanes\cite{1, 2}, and it also
+solves the interference during  the procedure of the boarding
+airplane,as described above we can get to the  optimization
+boarding time.We also know that all the service is automate.
+\item \textbf{Improve the quality of the airport service}\\
+Balancing the cost of the cost and the benefit, it will bring in
+more convenient  for airport and passengers.It also saves many
+human resources for the airline. \item \textbf{}
+\end{itemize}
+
+\begin{thebibliography}{99}
+\bibitem{1} D.~E. KNUTH   The \TeX{}book  the American
+Mathematical Society and Addison-Wesley
+Publishing Company , 1984-1986.
+\bibitem{2}Lamport, Leslie,  \LaTeX{}: `` A Document Preparation System '',
+Addison-Wesley Publishing Company, 1986.
+\bibitem{3}\url{http://www.latexstudio.net/}
+\bibitem{4}\url{http://www.chinatex.org/}
+\end{thebibliography}
+
+\begin{appendices}
+
+%  备忘录正文部分
+%  \begin{memo}[Memorandum]
+% 	\lipsum[1-3]
+% \end{memo}
+
+\section{First appendix}
+
+\lipsum[13]
+
+Here are simulation programmes we used in our model as follow.\\
+
+\textbf{\textcolor[rgb]{0.98,0.00,0.00}{Input matlab source:}}
+\lstinputlisting[language=Matlab]{./code/mcmthesis-matlab1.m}
+
+\section{Second appendix}
+
+some more text \textcolor[rgb]{0.98,0.00,0.00}{\textbf{Input C++ source:}}
+\lstinputlisting[language=C++]{./code/mcmthesis-sudoku.cpp}
+
+\end{appendices}
+\newpage
+
+\section*{\centering Report on Use of AI}
+\subsection*{OpenAI-GPT5-Thinking}
+\textbf{Query1 :} prompt1  \par
+\textbf{Output1:}
+\begin{mdframed}[
+    linewidth=2pt,        % 边框线粗细
+    linecolor=black,        % 边框颜色
+    innertopmargin=10pt,    % 框内顶部间距
+    innerbottommargin=10pt, % 框内底部间距
+    innerleftmargin=10pt,   % 框内左侧间距
+    innerrightmargin=10pt,  % 框内右侧间距
+    skipabove=5pt,         % 框上方间距
+    skipbelow=5pt,          % 框下方间距
+    backgroundcolor=gray!20
+]
+AI Output
+\end{mdframed}
+
+
 \end{document}
+
+%% 
+%% This work consists of these files mcmthesis.dtx,
+%%                                   figures/ and
+%%                                   code/,
+%% and the derived files             mcmthesis.cls,
+%%                                   mcmthesis-demo.tex,
+%%                                   README,
+%%                                   LICENSE,
+%%                                   mcmthesis.pdf and
+%%                                   mcmthesis-demo.pdf.
+%%
+%% End of file `mcmthesis-demo.tex'.
