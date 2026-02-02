@@ -1,0 +1,32 @@
+This is pdfTeX, Version 3.141592653-2.6-1.40.28 (TeX Live 2025) (preloaded format=pdflatex 2025.12.18)  2 FEB 2026 17:12
+entering extended mode
+ restricted \write18 enabled.
+ %&-line parsing enabled.
+**各版论文/latex.tex
+(./各版论文/latex.tex
+LaTeX2e <2025-11-01>
+L3 programming layer <2025-11-14>
+
+! LaTeX Error: File `mcmthesis.cls' not found.
+
+Type X to quit or <RETURN> to proceed,
+or enter new name. (Default extension: cls)
+
+Enter file name: 
+! Emergency stop.
+<read *> 
+         
+l.2 \mcmsetup
+             {CTeX = false,   % 使用 CTeX 套装时，设置为 true^^M
+*** (cannot \read from terminal in nonstop modes)
+
+ 
+Here is how much of TeX's memory you used:
+ 20 strings out of 469476
+ 462 string characters out of 5466914
+ 433733 words of memory out of 5000000
+ 28775 multiletter control sequences out of 15000+600000
+ 627721 words of font info for 40 fonts, out of 8000000 for 9000
+ 36 hyphenation exceptions out of 8191
+ 19i,0n,29p,124b,17s stack positions out of 10000i,1000n,20000p,200000b,200000s
+!  ==> Fatal error occurred, no output PDF file produced!

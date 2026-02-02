@@ -1,0 +1,6 @@
+PWD D:/meisai/code-for-MCM/各版论文
+INPUT c:/Users/13200/AppData/Roaming/TinyTeX/texmf.cnf
+INPUT c:/Users/13200/AppData/Roaming/TinyTeX/texmf-dist/web2c/texmf.cnf
+INPUT c:/Users/13200/AppData/Roaming/TinyTeX/texmf-var/web2c/pdftex/pdflatex.fmt
+INPUT latex.tex
+OUTPUT latex.log
