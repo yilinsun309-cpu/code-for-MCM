@@ -114,7 +114,7 @@ $T$ & Total project duration (Time-to-Completion) & year & $\ge 0$ \\
 \multicolumn{4}{l}{\textit{\textbf{Global Parameters}}} \\
 $M_{goal}$ & Total material mass required for the Moon Colony & ton & $10^8$ \\
 \multicolumn{4}{l}{\textit{\textbf{Cost \& Capacity Parameters}}} \\
-$C_{launch}$ & Cost per single Falcon Heavy launch & USD & $1.5 \times 10^8$ \\
+$C_{launch}$ & Cost per single Falcon Heavy launch & USD & $1.5 \times 10^7$ (aggressive full-reuse)\\
 $C_{elec\_unit}$ & Electricity cost per ton via Space Elevator & USD/ton & $4.15^*$
 \\
 $C_{maint}$ & Annual maintenance cost for SE system & USD/yr & $1.2 \times 10^8$ \\
@@ -128,7 +128,7 @@ $f_{total}$ & Sum of site cadences $f_{total}=\sum_{s\in\mathcal{S}} c_s$ & laun
 & From site-level forecasts \\
 $f_{cycle}$ & Max. round-trips per rocket per year (apex-to-Moon) & cycles/yr & $
 \approx 60^\dagger$ \\
-$\tau_{\text{transit}}$ & Elevator ground-to-apex one-way time & day & $\approx 14$ (100{,}000 km at 300 km/h) \\
+$\tau_{\text{transit}}$ & Elevator ground-to-apex one-way time & year & $\approx 14/365$ (100{,}000 km at 300 km/h) \\
 \multicolumn{4}{l}{\textit{\textbf{Launch-site cadence parameters}}} \\
 $\mathcal{S}$ & Set of launch sites & -- & see Table~\ref{tab:launch_forecast_interval_2050} \\
 $\lambda_s^{\text{max}}$ & Max annual cadence at site $s$ & launches/yr & from forecast \\
@@ -163,8 +163,8 @@ $L(t)$ & Program/state of a rocket at time $t$ & - & Simulated \\
 $I(t)$ & Number of active rockets at time $t$ & rockets & Simulated \\
 $I_{\text{safe}}$ & Safety threshold for active fleet size & rockets & From Task 1 \\
 $R(t)$ & Replacement (relaunch) decision at time $t$ & rockets & Policy \\
-$\delta$ & Replacement latency (delay before replacement becomes available) & day/yr & TBD \\
-$\Delta \tau$ & Time buffer added to absorb disruptions & day/yr & Tuned \\
+$\delta$ & Replacement latency (delay before replacement becomes available) & day & TBD \\
+$\Delta \tau$ & Time buffer added to absorb disruptions & day & Tuned \\
 $\eta_{\text{pack}}$ & Packing efficiency for water (net water per nominal payload) & - & $0.8\sim 1.0$ \\
 $\kappa_{\text{svc}}$ & Water handling service-time multiplier & - & $1.0\sim 1.5$ \\
 \midrule
@@ -520,8 +520,7 @@ Feasibility requires $M_{\mathrm{Apex\rightarrow Moon}} \ge M_{SE}$, hence
 \begin{equation}
 N_{Rock}\cdot f_{cycle}\cdot Cap_{Rock}\cdot T_A^{*} \ge M_{goal}.
 \end{equation}
-Substituting $T_A^{*} = M_{goal}/Cap_{SE}$, the required number of rockets is
-bounded by
+When the elevator is the bottleneck ($T_A^{*}=\tau_{\text{transit}}+M_{goal}/Cap_{SE}$), substituting this $T_A^{*}$ gives the tight lower bound on fleet size:
 \begin{equation}
 N_{Rock} \ge \frac{Cap_{SE}}{f_{cycle}\cdot Cap_{Rock}},
 \end{equation}
@@ -1295,8 +1294,8 @@ set $S(0)=0$, choose $Cap_{SE}^{\text{eff}}$ (Scenario~1/3), and set $t_{\text{s
 \paragraph{Main loop.}
 Repeat until $M(t)\ge M_{\text{goal}}$:
 \begin{enumerate}
-\item Advance time to next event $t\leftarrow \min_r T_r(t)$ and update inventory
-$S(t)\leftarrow S(t_{\text{prev}})+Cap_{SE}^{\text{eff}}(t-t_{\text{prev}})$, $t_{\text{prev}}\leftarrow t$.
+\item Advance time to next event $t\leftarrow \min_r T_r(t)$ and update inventory with transit lag
+$S(t)\leftarrow S(t_{\text{prev}})+Cap_{SE}^{\text{eff}}\bigl((t-t_{\text{prev}})-\tau_{\text{transit}}\bigr)_+$, $t_{\text{prev}}\leftarrow t$.
 \item Let $r$ be the rocket completing Program $l=L_r(t)$. Sample $L_r^+$ from $\bar{\mathbf P}^{(h)}$.
 \item If $L_r^+=6$, set $T_r(t^+)=+\infty$ and issue $D(t)$ replacement orders; each order is inserted via the
 launch-slot server after latency $\delta$.
