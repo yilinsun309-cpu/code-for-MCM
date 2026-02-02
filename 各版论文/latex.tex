@@ -5,6 +5,10 @@
         titlepage = false, abstract = true}
 % \usepackage{newtxtext,newtxmath}
 \usepackage{palatino}
+\usepackage{microtype}
+\usepackage{setspace}
+\usepackage{caption}
+\usepackage{titlesec}
 \usepackage{lipsum}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
@@ -14,6 +18,16 @@
 % \usepackage{hyperref}
 \usepackage{indentfirst}
 \setlength{\parindent}{2em}
+\setlength{\parskip}{0.35em}
+\setstretch{1.08}
+\setlength{\textfloatsep}{10pt plus 2pt minus 2pt}
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{6pt}
+\setlength{\belowcaptionskip}{6pt}
+\captionsetup{font=small,labelfont=bf}
+\titlespacing*{\section}{0pt}{1.2ex plus 0.2ex minus 0.2ex}{0.8ex}
+\titlespacing*{\subsection}{0pt}{1.0ex plus 0.2ex minus 0.2ex}{0.6ex}
+\titlespacing*{\subsubsection}{0pt}{0.8ex plus 0.2ex minus 0.2ex}{0.4ex}
 \makeatletter
 \renewcommand\@cite[1]{\textsuperscript{[#1]}}
 \makeatother
