@@ -279,7 +279,7 @@ def validate_config(config: Task4Config) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Task 4 environmental impact calculator")
-    parser.add_argument("--scenario", type=str, default="C", help="Scenario A/B/C (or 1/2/3)")
+    parser.add_argument("--scenario", type=str, default="A", help="Scenario A/B/C (or 1/2/3)")
     parser.add_argument("--total-mass", type=float, default=None, help="Total mass to deliver (ton)")
     parser.add_argument("--cap-rock", type=float, default=None, help="Payload per launch (ton)")
     parser.add_argument("--cap-se", type=float, default=None, help="Elevator annual capacity (ton/yr)")
