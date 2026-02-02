@@ -1683,7 +1683,12 @@ For each launch site $j\in\mathcal{S}$ and year $y$ impose
 \begin{equation}
 N_{\text{launch},j}(y)\ \le\ f_{\text{green},j},
 \end{equation}
-where $N_{\text{launch},j}(y)$ counts all launches (including replacements) in year $y$, and $f_{\text{green},j}$ is the annual eco-capacity derived from noise/thermal/acid deposition limits.
+and, under the 2050 scaling in \texttt{生态.md},
+\begin{equation}
+N_{\text{launch},j}(y)\ \le\ k_{\text{env}}\,N_j^{(0)},\qquad
+k_{\text{env}}=\frac{1}{\alpha_{\text{climate}}}\in\{10,50\},
+\end{equation}
+where $N_{\text{launch},j}(y)$ counts all launches (including replacements) in year $y$, $f_{\text{green},j}$ is the annual eco-capacity derived from noise/thermal/acid deposition limits, and $N_j^{(0)}$ is the present permitted cadence of site $j$ (Table~\ref{tab:launch_forecast_interval_2050}). The binding cap is $\min(f_{\text{green},j},\,k_{\text{env}}N_j^{(0)})$.
 
 \paragraph{DES coupling (red line).}
 If $N_{\text{launch},j}(y)=f_{\text{green},j}$, any new launch assigned to site $j$ is delayed to the earliest slot in $y\!+\!1$ or reassigned to another site $j'$ (with its own cadence and possibly longer prep/transfer time). This rule is implemented in the launch-slot server before time advance.
@@ -1694,9 +1699,9 @@ The constraint can cause non-linear jumps in completion time $T$ when key sites 
 \subsection{Objective metrics (global externalities)}
 \paragraph{Stratospheric forcing proxy.}
 \begin{equation}
-E_{\text{strat}}=\sum_{y}\sum_{j\in\mathcal{S}} N_{\text{launch},j}(y)\cdot \text{Fuel}_j \cdot \beta,
+E_{\text{strat}}=\sum_{y}\sum_{j\in\mathcal{S}} N_{\text{launch},j}(y)\cdot \text{Fuel}_j \cdot \big(\alpha_{\text{climate}}\beta\big),
 \end{equation}
-where $N_{\text{launch},j}(y)$ is the launch count at site $j$ in year $y$, $\text{Fuel}_j$ is mean propellant per launch from site $j$, and $\beta$ converts fuel burn to a relative stratospheric impact proxy. Used for cross-scenario comparison (A/B/C), not as absolute radiative forcing.
+where $N_{\text{launch},j}(y)$ is the launch count at site $j$ in year $y$, $\text{Fuel}_j$ is mean propellant per launch from site $j$, and $\beta$ converts fuel burn to a relative stratospheric impact proxy. The factor $\alpha_{\text{climate}}$ (Clean $0.10$, UltraClean $0.02$, or $1$ baseline) scales emissions to the propulsion mix in \texttt{生态.md}. Used for cross-scenario comparison (A/B/C), not as absolute radiative forcing.
 
 \paragraph{Carbon intensity per delivered ton.}
 \begin{equation}
