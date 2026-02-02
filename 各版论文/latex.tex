@@ -1203,8 +1203,9 @@ If $L_r^{+}=6$, the rocket is permanently removed from the system.
 Let $\tau_l$ be the nominal duration of program $l\in\mathcal{L}$.
 To reflect conservative scheduling, we inflate each duration by a buffer $\Delta\tau$:
 \[
-\tau_l^{\text{robust}}=\tau_l+\Delta\tau,\qquad l\in\mathcal{L}.
+\tau_l^{\text{robust}}=\tau_l+\frac{\Delta\tau}{365},\qquad l\in\mathcal{L},
 \]
+where $\tau_l$ is in years and $\Delta\tau$ is specified in days.
 After the transition,
 \[
 L_r(t^+) \leftarrow L_r^{+},\qquad
