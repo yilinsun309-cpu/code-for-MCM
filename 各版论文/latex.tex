@@ -758,7 +758,7 @@ $\lambda_{\text{down}}=\lambda_{\text{hit}}p_{\text{down}|\text{hit}}$ and
 \end{equation}
 
 \paragraph{Mapping to Markov absorbing probabilities $p_{l6}$.}
-With the event-composition rule
+With the event-composition rule (see Table~\ref{tab:failure_prob_task2} for the mapping introduced below)
 \begin{equation}
 P_{\text{succ}}=\prod_k(1-p_k),\qquad P_{\text{fail}}=1-P_{\text{succ}},
 \end{equation}
@@ -1563,7 +1563,11 @@ S_{\text{moon}}^{*}=c\cdot Q_{\alpha}(G),
 \end{equation}
 where $Q_{\alpha}(G)$ is the $\alpha$-quantile of $G$ estimated from Monte Carlo DES trajectories.
 This provides a direct policy interpretation: \emph{Task~3's additional cost is the price of buffering against
-rare but severe supply interruptions.}
+rare but severe supply interruptions.} In practice we compute $S_{\text{moon}}^{*}$ by an outer one-dimensional search
+that calls the DES repeatedly: start from a lower bound $S_{\min}=c\cdot(\delta+W_q)$ and an upper bound
+$S_{\max}$ large enough to make stockout impossible in pilot runs, and apply binary search (or a coarse grid search)
+on $S_{\text{moon}}$ until the empirical $\alpha$-quantile constraint is met within tolerance; the same loop yields
+$Q_{\alpha}(G)$ as a by-product.
 
 \subsubsection{Cost Accounting and Scenario-Specific Elevator Water Mass}
 \label{sec:model3_cost_opt}
