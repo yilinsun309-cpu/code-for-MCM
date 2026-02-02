@@ -21,6 +21,8 @@ from typing import Any, Deque, Dict, List, Optional, Tuple, Sequence
 
 INF = 1.0e30
 DAYS_PER_YEAR = 365.0
+EPS_WATER = 1.0e-6
+EPS_TIME = 1.0e-12
 
 # -------------------- Global Defaults --------------------
 DEFAULT_SCENARIO = 3
@@ -28,8 +30,8 @@ DEFAULT_SCENARIO = 3
 # Demand side
 DEFAULT_N = 100000
 DEFAULT_D_DAYS = 365.0
-DEFAULT_W_PERSON = 3.8
-DEFAULT_R_BASE = 0.98
+DEFAULT_W_PERSON = 157.1
+DEFAULT_R_BASE = 0.52
 DEFAULT_DELTA_R = 0.0
 DEFAULT_R_DEGRADE_START = None
 DEFAULT_R_DEGRADE_END = None
@@ -502,13 +504,15 @@ class Task3Simulator:
         if r is None:
             return
         needed = r.payload - self.S
-        if needed <= 0:
+        if needed <= EPS_WATER:
             return
         delay = self.params.elevator_delay
         if self.t < delay:
             ready_time = delay + needed / self.cap_eff
         else:
             ready_time = self.t + needed / self.cap_eff
+        if ready_time <= self.t + EPS_TIME:
+            ready_time = self.t + EPS_TIME
         if self.inventory_event_time is None or ready_time < self.inventory_event_time:
             self.inventory_event_time = ready_time
             self.schedule_event(ready_time, "inventory")
@@ -521,7 +525,7 @@ class Task3Simulator:
                 self.waiting.popleft()
                 self.waiting_since.pop(rid, None)
                 continue
-            if self.S < r.payload:
+            if self.S + EPS_WATER < r.payload:
                 break
             self.waiting.popleft()
             wait_start = self.waiting_since.pop(rid, None)
