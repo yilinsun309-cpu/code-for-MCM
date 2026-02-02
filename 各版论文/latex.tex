@@ -559,10 +559,16 @@ N_{Rock} = \sum_{s\in\mathcal{S}} N_s,\qquad N_s \le \lambda_s^{\text{max}}\,T,\
 \end{equation}
 so the aggregate effective cadence is $f_{total}=\sum_s c_s$ with $c_s=N_s/T$.
 Hence, the minimum feasible completion time is obtained by saturating the launch
-rate:
+rate and respecting at least one full loop time:
 \begin{equation}
-T_B^{*}=\frac{N_{Rock,B}^{*}}{\sum_{s\in\mathcal{S}} c_s}.
+T_B^{*}=\max\!\left(\frac{N_{Rock,B}^{*}}{\sum_{s\in\mathcal{S}} c_s},\ \tau_2+\tau_3+\tau_5\right).
 \end{equation}
+
+To avoid Apex starvation during the initial $\tau_{\text{transit}}$ lag, a startup feasibility condition is
+\begin{equation}
+N_{Rock} \ \ge\ \left\lceil \frac{Cap_{SE}\,\tau_{\text{transit}}}{f_{cycle}\,Cap_{Rock}} \right\rceil,
+\end{equation}
+ensuring that elevator inflow accumulated over the lag can be cleared by the available orbital fleet without queue collapse; the effective lower bound is the maximum of the two constraints above.
 
 The corresponding total cost under Scenario B is
 \begin{equation}
@@ -641,8 +647,9 @@ T_{\text{deploy}}(N_{Rock}) = \frac{N_{Rock}}{\sum_{s\in\mathcal{S}} c_s}.
 The total project duration is approximated as
 \begin{equation}
 T(N_{Rock}) =
-\max\Bigl( T_{\text{deploy}}(N_{Rock}),\; T_{\text{remain}}(N_{Rock}) \Bigr).
+\max\Bigl( T_{\text{deploy}}(N_{Rock}),\; \tau_{\text{transit}}+T_{\text{remain}}(N_{Rock}) \Bigr),
 \end{equation}
+adding the elevator ground-to-apex transit delay before steady Apex-supported cycling can start.
 
 ---
 
