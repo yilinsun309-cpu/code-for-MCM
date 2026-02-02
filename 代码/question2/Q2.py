@@ -15,6 +15,7 @@ import argparse
 import heapq
 import json
 import math
+import os
 import random
 from collections import deque
 from typing import Any, Deque, Dict, List, Optional, Tuple
@@ -31,11 +32,21 @@ DEFAULT_CAP_ROCK = 125.0
 DEFAULT_F_TOTAL = 3834.0
 DEFAULT_TAU_DAYS = {1: 3.0, 2: 3.0, 3: 3.0, 4: 3.0, 5: 3.0}
 DEFAULT_DELTA_TAU_DAYS = 0.0
-DEFAULT_P_FAIL = {1: 0.0, 2: 1.78e-2, 3: 1.0e-3, 4: 1.03e-2, 5: 0.0}
+DEFAULT_TAU_TRANSIT_DAYS = 14.0  # ground->apex elevator delay (paper baseline)
+# Baseline failure probabilities mapped from segmented return/dock data (paper Table~failure_prob_task2)
+# Failure probabilities (baseline): combine launch+dock for Program 1, keep direct launch for 2,
+# keep burn leg for 3, combine return+dock for 4 (approx), small return for 5.
+DEFAULT_P_FAIL = {
+    1: 1.0 - (1.0 - 1.78e-2) * (1.0 - 1.03e-2),  # launch + dock combo ≈ 2.80%
+    2: 1.78e-2,  # ground launch
+    3: 1.0e-3,   # transfer leg
+    4: 1.0 - (1.0 - 1.0e-3) * (1.0 - 1.03e-2),   # return + dock combo ≈ 1.13%
+    5: 3.6e-4,   # return-to-site
+}
 DEFAULT_FAIL_COST = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0}
 DEFAULT_C_LAUNCH = 1.5e7
-DEFAULT_I_SAFE = 70
-DEFAULT_DELTA_REPLACEMENT_DAYS = 2.0
+DEFAULT_I_SAFE = 72
+DEFAULT_DELTA_REPLACEMENT_DAYS = 14.0
 DEFAULT_DOWN_RATIO = (0.0, 0.1)
 DEFAULT_INITIAL_ROCKETS = None
 DEFAULT_MAX_TIME_YEARS = 200.0
@@ -59,6 +70,7 @@ class Task2Params:
         }
     )
     delta_tau: float = DEFAULT_DELTA_TAU_DAYS / DAYS_PER_YEAR
+    tau_transit: float = DEFAULT_TAU_TRANSIT_DAYS / DAYS_PER_YEAR
     p_fail: Dict[int, float] = field(
         default_factory=lambda: DEFAULT_P_FAIL.copy()
     )
@@ -198,7 +210,10 @@ def phi_for_scenario(scenario: int) -> Dict[int, int]:
 
 
 def start_state_for_scenario(scenario: int) -> int:
-    return 1 if scenario == 1 else 2
+    # For Task 2 we assume the fleet has already been deployed (steady-state baseline).
+    # Scenario 1/3: rockets reside at Apex ready to load/dispatch (state 4 -> 3).
+    # Scenario 2: rockets start from ground launch cycle (state 2).
+    return 4 if scenario in (1, 3) else 2
 
 
 def requires_inventory(scenario: int, from_state: int, to_state: int) -> bool:
@@ -271,7 +286,11 @@ class Task2Simulator:
         if dt < 0:
             return
         if self.cap_eff > 0:
-            self.S += self.cap_eff * dt
+            # Elevator inflow starts after transit delay
+            t0 = max(self.t, self.params.tau_transit)
+            t1 = max(new_t, self.params.tau_transit)
+            if t1 > t0:
+                self.S += self.cap_eff * (t1 - t0)
         self.t = new_t
 
     def schedule_inventory_event(self) -> None:
@@ -287,7 +306,8 @@ class Task2Simulator:
         needed = r.payload - self.S
         if needed <= eps:
             return
-        ready_time = self.t + needed / self.cap_eff
+        start_flow = max(self.t, self.params.tau_transit)
+        ready_time = start_flow + needed / self.cap_eff
         if self.inventory_event_time is None or ready_time < self.inventory_event_time:
             self.inventory_event_time = ready_time
             self.schedule_event(ready_time, "inventory")
@@ -332,9 +352,6 @@ class Task2Simulator:
             return
         state = r.state
 
-        if state == 3:
-            self.M += r.payload
-
         pf = self.params.p_fail.get(state, 0.0)
         if self.rng.random() < pf:
             r.state = 6
@@ -343,6 +360,10 @@ class Task2Simulator:
             self.order_replacements()
             self.update_deficit()
             return
+
+        if state == 3:
+            # Only credit delivery after a successful leg
+            self.M += r.payload
 
         next_state = self.phi.get(state)
         if next_state is None:
@@ -473,6 +494,58 @@ def summarize_results(results: List[SimulationResult]) -> Dict[str, Any]:
     }
 
 
+def export_results(
+    summary: Dict[str, Any],
+    results: List[SimulationResult],
+    outdir: str,
+) -> None:
+    """Write summary JSON and per-run CSV to outdir."""
+    import os
+    import csv
+
+    os.makedirs(outdir, exist_ok=True)
+
+    # Summary JSON
+    with open(os.path.join(outdir, "summary.json"), "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+
+    # Per-run CSV (if any)
+    if not results:
+        return
+    fieldnames = [
+        "run",
+        "T_star",
+        "delivered",
+        "failures",
+        "launches",
+        "fail_cost",
+        "fail_loss_cost",
+        "replace_cost",
+        "max_deficit",
+        "completed",
+        "down_ratio",
+    ]
+    with open(os.path.join(outdir, "runs.csv"), "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for i, r in enumerate(results, 1):
+            writer.writerow(
+                {
+                    "run": i,
+                    "T_star": r.T_star,
+                    "delivered": r.delivered,
+                    "failures": r.failures,
+                    "launches": r.launches,
+                    "fail_cost": r.fail_cost,
+                    "fail_loss_cost": r.fail_loss_cost,
+                    "replace_cost": r.replace_cost,
+                    "max_deficit": r.max_deficit,
+                    "completed": r.completed,
+                    "down_ratio": r.down_ratio,
+                }
+            )
+
+
 def run_monte_carlo(
     params: Task2Params,
     n_runs: int,
@@ -499,7 +572,12 @@ def main() -> None:
     parser.add_argument("--verbose", action="store_true", help="Enable per-event logs")
     parser.add_argument("--log-every", type=int, default=DEFAULT_LOG_EVERY, help="Log per N events")
     parser.add_argument("--mc-log-every", type=int, default=DEFAULT_MC_LOG_EVERY, help="Log per N MC runs")
+    parser.add_argument("--outdir", type=str, default=None, help="Output directory for summary/runs")
     args = parser.parse_args()
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    root_dir = os.path.dirname(base_dir)
+    default_outdir = os.path.join(root_dir, "results", "task2")
 
     params = Task2Params()
     if args.config:
@@ -512,13 +590,16 @@ def main() -> None:
 
     validate_params(params)
 
-    _, summary = run_monte_carlo(
+    results, summary = run_monte_carlo(
         params,
         n_runs=args.n_mc,
         verbose=args.verbose,
         log_every=args.log_every,
         mc_log_every=args.mc_log_every,
     )
+
+    outdir = args.outdir or default_outdir
+    export_results(summary, results, outdir)
     print(json.dumps(summary, indent=2))
 
 
