@@ -73,6 +73,9 @@ class Task4Config:
     site_caps: Dict[str, float]
     launch_plan: Optional[Dict[str, float]]
     f_green: Optional[Dict[str, float]]
+    delivered_ton: Optional[float]
+    elevator_mass_ton: Optional[float]
+    direct_mass_ton: Optional[float]
 
 
 def normalize_scenario(value: str) -> str:
@@ -197,6 +200,7 @@ def compute_caps(
         "launches_total": launches_per_year,
         "cap_violation": launches_per_year > total_cap if total_cap > 0 else False,
         "max_utilization": max((d["utilization"] for d in detail.values()), default=0.0),
+        "years_lower_bound_due_to_caps": (launches_per_year / total_cap) if total_cap > 0 else None,
     }
     return detail, summary
 
@@ -245,6 +249,9 @@ def build_config(args: argparse.Namespace) -> Task4Config:
         site_caps=site_caps,
         launch_plan=launch_plan,
         f_green=f_green,
+        delivered_ton=args.delivered_ton,
+        elevator_mass_ton=args.elevator_mass_ton,
+        direct_mass_ton=args.direct_mass_ton,
     )
 
 
@@ -278,6 +285,9 @@ def main() -> None:
     parser.add_argument("--elevator-towers", type=float, default=None, help="Number of elevator towers")
     parser.add_argument("--f-cycle", type=float, default=None, help="Cycles per year for orbital rockets")
     parser.add_argument("--n-launch", type=int, default=None, help="Total Earth launches")
+    parser.add_argument("--delivered-ton", type=float, default=None, help="Delivered mass to Moon from DES")
+    parser.add_argument("--elevator-mass-ton", type=float, default=None, help="Total mass lifted by elevator from DES")
+    parser.add_argument("--direct-mass-ton", type=float, default=None, help="Direct Earth-to-Moon delivered mass (optional)")
     parser.add_argument("--project-years", type=float, default=1.0, help="Project duration (years)")
     parser.add_argument("--bc-ei", type=float, default=BC_EI_DEFAULT_G_PER_KG, help="BC EI (g/kg fuel)")
     parser.add_argument(
@@ -301,30 +311,14 @@ def main() -> None:
     if n_launch_total is None:
         n_launch_total = infer_n_launch_total(config)
 
-    direct_mass_ton = 0.0
-    if config.scenario == "B":
-        direct_mass_ton = min(config.total_mass_ton, n_launch_total * config.cap_rock_ton)
+    # Delivered mass and elevator mass should come from DES outputs
+    if config.delivered_ton is None or config.elevator_mass_ton is None:
+        raise ValueError("Scenario C requires --delivered-ton and --elevator-mass-ton from DES outputs.")
 
-    elev_cap_ton = None
-    orbit_cap_ton = None
-    deliverable_elevator_ton = 0.0
-    if config.scenario == "A":
-        elev_cap_ton = (
-            config.cap_se_ton_per_year * config.project_years * config.elevator_towers
-        )
-        deliverable_elevator_ton = min(config.total_mass_ton, elev_cap_ton)
-    elif config.scenario == "C":
-        elev_cap_ton = (
-            config.cap_se_ton_per_year * config.project_years * config.elevator_towers
-        )
-        # For environmental accounting, require n_launch_total from DES logs; do not infer orbital throughput here.
-        deliverable_elevator_ton = min(config.total_mass_ton, elev_cap_ton)
-
-    deliverable_ton = direct_mass_ton + deliverable_elevator_ton
-    if deliverable_ton > config.total_mass_ton:
-        deliverable_ton = config.total_mass_ton
+    direct_mass_ton = config.direct_mass_ton if config.direct_mass_ton is not None else 0.0
+    deliverable_ton = min(config.delivered_ton, config.total_mass_ton)
+    mass_elevator_ton = config.elevator_mass_ton
     infeasible = deliverable_ton + 1.0e-9 < config.total_mass_ton
-    mass_elevator_ton = elevator_mass(config, deliverable_ton, direct_mass_ton)
     launches_per_year = n_launch_total / config.project_years
 
     rocket = compute_rocket_emissions(n_launch_total, config.bc_ei_g_per_kg)
