@@ -1,0 +1,16 @@
+{
+  "completed_runs": 1,
+  "total_runs": 1,
+  "mean_T": 189.20823336300882,
+  "std_T": 0.0,
+  "ci95_T": [
+    189.20823336300882,
+    189.20823336300882
+  ],
+  "mean_failures": 9931.0,
+  "mean_launches": 9928.0,
+  "mean_fail_cost": 148920000000.0,
+  "mean_fail_loss_cost": 0.0,
+  "mean_replace_cost": 148920000000.0,
+  "max_deficit": 11
+}

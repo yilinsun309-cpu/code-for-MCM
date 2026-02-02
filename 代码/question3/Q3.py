@@ -12,9 +12,11 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 import argparse
+import csv
 import heapq
 import json
 import math
+import os
 import random
 from collections import deque
 from typing import Any, Deque, Dict, List, Optional, Tuple, Sequence
@@ -71,6 +73,10 @@ DEFAULT_SEED = 1
 DEFAULT_MC_LOG_EVERY = 1
 DEFAULT_LOG_EVERY = 20000
 DEFAULT_VERBOSE = False
+
+
+def scenario_label(scenario: int) -> str:
+    return {1: "A", 2: "B", 3: "C"}.get(scenario, str(scenario))
 
 
 @dataclass(frozen=True)
@@ -792,6 +798,65 @@ def summarize_results(
     return summary
 
 
+def export_results(summary: Dict[str, Any], results: List[SimulationResult], params: Task3Params, outdir: str) -> None:
+    os.makedirs(outdir, exist_ok=True)
+
+    payload = {"parameters": asdict(params)}
+    payload.update(summary)
+    with open(os.path.join(outdir, "summary.json"), "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
+
+    if not results:
+        return
+
+    fieldnames = [
+        "run",
+        "seed",
+        "scenario",
+        "stockout",
+        "stockout_time_year",
+        "stockout_duration_days",
+        "min_inventory",
+        "max_gap_days",
+        "arrivals",
+        "direct_arrivals",
+        "failures",
+        "launches",
+        "max_deficit",
+        "max_inventory_queue",
+        "max_inventory_wait_days",
+        "max_launch_wait_days",
+        "down_ratio",
+        "W_end",
+    ]
+    with open(os.path.join(outdir, "runs.csv"), "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for i, r in enumerate(results, 1):
+            writer.writerow(
+                {
+                    "run": i,
+                    "seed": params.seed + i - 1,
+                    "scenario": scenario_label(params.scenario),
+                    "stockout": r.stockout,
+                    "stockout_time_year": r.stockout_time_year,
+                    "stockout_duration_days": r.stockout_duration_days,
+                    "min_inventory": r.min_inventory,
+                    "max_gap_days": r.max_gap_days,
+                    "arrivals": r.arrivals,
+                    "direct_arrivals": r.direct_arrivals,
+                    "failures": r.failures,
+                    "launches": r.launches,
+                    "max_deficit": r.max_deficit,
+                    "max_inventory_queue": r.max_inventory_queue,
+                    "max_inventory_wait_days": r.max_inventory_wait_days,
+                    "max_launch_wait_days": r.max_launch_wait_days,
+                    "down_ratio": r.down_ratio,
+                    "W_end": r.W_end,
+                }
+            )
+
+
 def run_monte_carlo(
     params: Task3Params,
     n_runs: int,
@@ -835,6 +900,7 @@ def main() -> None:
     parser.add_argument("--verbose", action="store_true", help="Enable per-event logs")
     parser.add_argument("--log-every", type=int, default=DEFAULT_LOG_EVERY, help="Log per N events")
     parser.add_argument("--mc-log-every", type=int, default=DEFAULT_MC_LOG_EVERY, help="Log per N MC runs")
+    parser.add_argument("--outdir", type=str, default=None, help="Output directory for summary/runs")
     args = parser.parse_args()
 
     params = Task3Params()
@@ -884,13 +950,18 @@ def main() -> None:
 
     validate_params(params)
 
-    _, summary = run_monte_carlo(
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    default_outdir = os.path.join(base_dir, "results", f"scenario_{scenario_label(params.scenario)}")
+
+    results, summary = run_monte_carlo(
         params,
         n_runs=args.n_mc,
         verbose=args.verbose,
         log_every=args.log_every,
         mc_log_every=args.mc_log_every,
     )
+    outdir = args.outdir or default_outdir
+    export_results(summary, results, params, outdir)
     print(json.dumps(summary, indent=2))
 
 

@@ -586,10 +586,6 @@ def main() -> None:
     parser.add_argument("--outdir", type=str, default=None, help="Output directory for summary/runs")
     args = parser.parse_args()
 
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    root_dir = os.path.dirname(base_dir)
-    default_outdir = os.path.join(root_dir, "results", "task2")
-
     params = Task2Params()
     if args.config:
         overrides = load_config(args.config)
@@ -600,6 +596,10 @@ def main() -> None:
         params = Task2Params(**{**asdict(params), "seed": args.seed})
 
     validate_params(params)
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    scenario_label = {1: "A", 2: "B", 3: "C"}.get(params.scenario, str(params.scenario))
+    default_outdir = os.path.join(base_dir, "results", f"scenario_{scenario_label}")
 
     results, summary = run_monte_carlo(
         params,

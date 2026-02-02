@@ -6,7 +6,8 @@ from __future__ import annotations
 import argparse
 import json
 import math
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 # -------------------- Global Defaults (from the paper) --------------------
@@ -303,6 +304,7 @@ def main() -> None:
     parser.add_argument("--site-caps", type=str, default=None, help="JSON file for site caps")
     parser.add_argument("--launch-plan", type=str, default=None, help="JSON file for per-site launches")
     parser.add_argument("--f-green", type=str, default=None, help="JSON file for ecological launch caps (f_green)")
+    parser.add_argument("--outdir", type=str, default=None, help="Output directory for summary.json")
     args = parser.parse_args()
 
     config = build_config(args)
@@ -393,6 +395,15 @@ def main() -> None:
         "site_caps": caps_detail,
         "site_caps_summary": caps_summary,
     }
+
+    base_dir = Path(__file__).resolve().parent
+    default_outdir = base_dir / "results" / f"scenario_{config.scenario}"
+    outdir = Path(args.outdir) if args.outdir else default_outdir
+    outdir.mkdir(parents=True, exist_ok=True)
+    payload = {"parameters": asdict(config)}
+    payload.update(summary)
+    with open(outdir / "summary.json", "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2)
 
     print(json.dumps(summary, indent=2))
 

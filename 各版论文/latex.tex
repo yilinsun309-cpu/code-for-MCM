@@ -1779,6 +1779,46 @@ Addison-Wesley Publishing Company, 1986.
 \bibitem{4}\url{http://www.chinatex.org/}
 \end{thebibliography}
 
+% =========================
+% Task 5 Action Plan (after references)
+% =========================
+\section{Agency Recommendation: Action Plan for a 100{,}000-Person Lunar Colony}
+\label{sec:agency_action_plan}
+
+\subsection{Decision Conclusion and Evidence Chain}
+\label{subsec:decision_conclusion}
+
+We align Task~1--4 outputs into a unified decision matrix with three alternatives (Scenario A/B/C) and five \emph{cost-type} criteria:
+\begin{equation}
+\mathcal{K}=\{T,\ C,\ N_{\text{fail}},\ S_{\text{moon}},\ E_{\text{impact}}\}.
+\end{equation}
+$T$ is the total time to deliver $10^8$~tons; $C$ is the total expenditure under the learning-curve cost model; $N_{\text{fail}}$ is the expected absorbing failures from the Markov--DES in Task~2; $S_{\text{moon}}$ is the safety-stock threshold from Task~3; $E_{\text{impact}}$ is the environmental impact proxy (Task~4).
+
+Weights are obtained by combined weighting: entropy-weight method (objective dispersion) + AHP (subjective preference: economy / safety / green). TOPSIS ranks scenarios by closeness coefficient $C^*$.
+
+\paragraph{Result.} Across all AHP profiles, TOPSIS ranks \textbf{Scenario~C} best. Dirichlet weight perturbation (3000 samples) shows \textbf{100\% winning probability} for Scenario~C. Reproducible files: \texttt{code/question5/q5\_economy.json}, \texttt{q5\_safety.json}, \texttt{q5\_green.json}, \texttt{q5\_robust.json}.
+
+\subsection{Overall Strategy}
+\label{subsec:overall_strategy}
+Scenario~C (hybrid elevator--rocket) uniquely satisfies: (i) early reachability; (ii) scalable bulk freight; (iii) resilience to queues/failures; (iv) environmental compliance under launch caps.
+
+\subsection{Phased Action Plan}
+\label{subsec:phased_plan}
+\paragraph{Phase 0: Governance (0--12 months)} Freeze metrics; enforce water security policy
+$S_{\text{moon}}\ge S_{\text{moon}}^{*}(\alpha)$ (Task~3, e.g., $\alpha=0.99$).
+
+\paragraph{Phase 1: Early Deployment（Rocket-led）} Deliver critical habitats, ECLSS, power; establish water--oxygen--power loop; stepwise ramp to 100k residents.
+
+\paragraph{Phase 2: Transition（Elevator bulk）} Shift bulk freight to elevator; rockets for urgent/contingency; enforce red-line dispatching when site caps bind; maintain $I_{\text{safe}}$.
+
+\paragraph{Phase 3: Sustainment（Steady state）} Permanently keep $S_{\text{moon}}\ge S_{\text{moon}}^{*}(\alpha)$; annual stress tests on elevator outages/launch pauses; budget for replacement launches using Task~2 tail statistics.
+
+\paragraph{Phase 4: Environmental Governance（All phases）} Bind launches by ecological caps; decarbonize elevator power; publish annual CO$_2$e and carbon-intensity audits.
+
+\subsection{Formal Final Recommendation}
+\label{subsec:formal_recommendation}
+Adopt \textbf{Scenario~C} as the primary logistics strategy. Mandate: (i) strict lunar safety stock $S_{\text{moon}}^{*}(\alpha)$; (ii) red-line dispatching for capacity and ecological cap violations, ensuring survivability under failures, queues, and launch-window constraints.
+
 \begin{appendices}
 
 %  备忘录正文部分

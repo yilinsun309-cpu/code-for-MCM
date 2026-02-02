@@ -15,6 +15,7 @@ import argparse
 import json
 import math
 import random
+from pathlib import Path
 from typing import Dict, List, Tuple
 
 MetricVector = List[float]
@@ -175,6 +176,7 @@ def main() -> None:
     p.add_argument("--ahp-profile", choices=["economy", "safety", "green"], default="economy", help="AHP preference set")
     p.add_argument("--robust-samples", type=int, default=0, help="Dirichlet perturbation count for win rate")
     p.add_argument("--seed", type=int, default=42, help="RNG seed")
+    p.add_argument("--output", type=str, default=None, help="Output JSON path (default question5/results/decision.json)")
     args = p.parse_args()
 
     with open(args.input, "r", encoding="utf-8") as f:
@@ -209,6 +211,14 @@ def main() -> None:
         def scorer(w):
             return topsis(matrix, w)
         result["robust_win_rate"] = robustness(scorer, w_comb, args.robust_samples, args.seed)
+
+    if args.output:
+        output_path = Path(args.output)
+    else:
+        output_path = Path(__file__).resolve().parent / "results" / "decision.json"
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(result, f, indent=2, ensure_ascii=False)
 
     print(json.dumps(result, indent=2, ensure_ascii=False))
 

@@ -510,6 +510,12 @@ def main() -> None:
     parser.add_argument("--export-all", action="store_true", help="Export all feasible points")
     parser.add_argument("--n-low", type=int, default=None, help="Override Scenario C N lower bound")
     parser.add_argument("--n-high", type=int, default=None, help="Override Scenario C N upper bound")
+    parser.add_argument(
+        "--outdir",
+        type=str,
+        default=None,
+        help="Output directory for CSV/PNG/JSON (default: question1/results)",
+    )
     args = parser.parse_args()
 
     params = Params()
@@ -525,10 +531,10 @@ def main() -> None:
     else:
         alpha_grid = np.linspace(0.0, 1.0, int(args.alpha_steps))
 
-    # Results directory
+    # Results directory (question-local by default)
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    root_dir = os.path.dirname(base_dir)
-    results_dir = os.path.join(root_dir, "results", "model1")
+    default_results_dir = os.path.join(base_dir, "results")
+    results_dir = args.outdir or default_results_dir
     os.makedirs(results_dir, exist_ok=True)
 
     # Scenario A/B
