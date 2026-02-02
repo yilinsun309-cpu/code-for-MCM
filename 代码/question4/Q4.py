@@ -72,6 +72,7 @@ class Task4Config:
     grid_intensity: float
     site_caps: Dict[str, float]
     launch_plan: Optional[Dict[str, float]]
+    f_green: Optional[Dict[str, float]]
 
 
 def normalize_scenario(value: str) -> str:
@@ -95,9 +96,7 @@ def infer_n_launch_total(config: Task4Config) -> int:
         return 0
     if config.scenario == "B":
         return int(math.ceil(config.total_mass_ton / config.cap_rock_ton))
-    return int(
-        math.ceil(config.cap_se_ton_per_year / (config.f_cycle_per_year * config.cap_rock_ton))
-    )
+    raise ValueError("Scenario C requires --n-launch (from Task2/Task3 DES logs).")
 
 
 def elevator_mass(config: Task4Config, deliverable_ton: float, direct_mass_ton: float) -> float:
@@ -151,27 +150,43 @@ def compute_caps(
     alpha_climate: float,
     launches_per_year: float,
     launch_plan: Optional[Dict[str, float]],
+    f_green: Optional[Dict[str, float]] = None,
 ) -> Tuple[Dict[str, Dict[str, float]], Dict[str, float]]:
     k_env = 1.0 / alpha_climate if alpha_climate > 0 else float("inf")
-    caps_env = {k: v * k_env for k, v in site_caps.items()}
-    total_cap = sum(caps_env.values())
+    caps_scaled = {k: v * k_env for k, v in site_caps.items()}
 
-    if launch_plan:
-        allocation = {k: float(launch_plan.get(k, 0.0)) for k in caps_env}
-    elif total_cap > 0:
-        allocation = {
-            k: launches_per_year * (cap / total_cap) for k, cap in caps_env.items()
+    if f_green:
+        caps_bind = {
+            k: min(caps_scaled[k], float(f_green.get(k, caps_scaled[k])))
+            for k in caps_scaled
         }
     else:
-        allocation = {k: 0.0 for k in caps_env}
+        caps_bind = caps_scaled
+
+    total_cap = sum(caps_bind.values())
+
+    if launch_plan:
+        allocation = {k: float(launch_plan.get(k, 0.0)) for k in caps_bind}
+        s = sum(allocation.values())
+        if s > 0:
+            scale = launches_per_year / s
+            allocation = {k: v * scale for k, v in allocation.items()}
+        else:
+            allocation = {k: 0.0 for k in caps_bind}
+    elif total_cap > 0:
+        allocation = {k: launches_per_year * (cap / total_cap) for k, cap in caps_bind.items()}
+    else:
+        allocation = {k: 0.0 for k in caps_bind}
 
     detail: Dict[str, Dict[str, float]] = {}
-    for site, cap in caps_env.items():
+    for site, cap in caps_bind.items():
         used = allocation.get(site, 0.0)
         util = used / cap if cap > 0 else 0.0
         detail[site] = {
             "cap_base": float(site_caps.get(site, 0.0)),
-            "cap_env": float(cap),
+            "cap_env": float(caps_scaled.get(site, 0.0)),
+            "cap_green": float(f_green.get(site, float("inf")) if f_green else float("inf")),
+            "cap_binding": float(cap),
             "launches": float(used),
             "utilization": float(util),
         }
@@ -206,6 +221,9 @@ def build_config(args: argparse.Namespace) -> Task4Config:
     site_caps = DEFAULT_SITE_CAPS.copy()
     if args.site_caps:
         site_caps = {k: float(v) for k, v in load_json(args.site_caps).items()}
+    f_green = None
+    if args.f_green:
+        f_green = {k: float(v) for k, v in load_json(args.f_green).items()}
 
     launch_plan = None
     if args.launch_plan:
@@ -226,6 +244,7 @@ def build_config(args: argparse.Namespace) -> Task4Config:
         grid_intensity=grid_intensity,
         site_caps=site_caps,
         launch_plan=launch_plan,
+        f_green=f_green,
     )
 
 
@@ -272,6 +291,7 @@ def main() -> None:
     parser.add_argument("--grid-intensity", type=float, default=None, help="Override grid CO2 intensity")
     parser.add_argument("--site-caps", type=str, default=None, help="JSON file for site caps")
     parser.add_argument("--launch-plan", type=str, default=None, help="JSON file for per-site launches")
+    parser.add_argument("--f-green", type=str, default=None, help="JSON file for ecological launch caps (f_green)")
     args = parser.parse_args()
 
     config = build_config(args)
