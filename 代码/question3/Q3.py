@@ -47,7 +47,14 @@ DEFAULT_TAU_DAYS = {1: 3.0, 2: 3.0, 3: 3.0, 4: 3.0, 5: 3.0}
 DEFAULT_DELTA_TAU_DAYS = 0.0
 DEFAULT_ELEVATOR_DELAY_DAYS = 14.0
 DEFAULT_MIN_CYCLE_DAYS = 6.0
-DEFAULT_P_FAIL = {1: 0.0, 2: 1.78e-2, 3: 1.0e-3, 4: 1.03e-2, 5: 0.0}
+# Align with Task2 baseline (launch+dock combo, return+dock combo)
+DEFAULT_P_FAIL = {
+    1: 1.0 - (1.0 - 1.78e-2) * (1.0 - 1.03e-2),
+    2: 1.78e-2,
+    3: 1.0e-3,
+    4: 1.0 - (1.0 - 1.0e-3) * (1.0 - 1.03e-2),
+    5: 3.6e-4,
+}
 DEFAULT_I_SAFE = 70
 DEFAULT_DELTA_REPLACEMENT_DAYS = 2.0
 DEFAULT_DOWN_RATIO = (0.0, 0.1)
