@@ -404,8 +404,7 @@ class Task3Simulator:
     def add_rocket(self, init_state: int) -> None:
         rid = self.next_rid
         self.next_rid += 1
-        loaded = True if init_state == 4 and self.params.scenario in (1, 3) else None
-        self.rocks[rid] = Rocket(rid=rid, state=init_state, payload=self.q_water, loaded_from_elevator=loaded)
+        self.rocks[rid] = Rocket(rid=rid, state=init_state, payload=self.q_water)
         self.schedule_event(self.t + self.tau_robust[init_state], "rocket", rid=rid)
 
     def schedule_program3(self, rid: int, start_time: float) -> None:
@@ -561,8 +560,8 @@ class Task3Simulator:
             self.max_gap_days = gap
         self.last_arrival_day = arrival_day
         self.arrivals += 1
-        # Only Scenario 2 counts as direct Earth-to-Moon delivery during operational year
-        if self.params.scenario == 2 and from_elevator is False:
+        # Scenario 2: all deliveries are direct Earth-to-Moon in the operational year
+        if self.params.scenario == 2:
             self.direct_arrivals += 1
         self.W += self.q_water
         if self.W < self.min_W:
