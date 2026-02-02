@@ -98,12 +98,10 @@ def infer_n_launch_total(config: Task4Config) -> int:
     )
 
 
-def elevator_mass(config: Task4Config, n_launch_total: int) -> float:
-    if config.scenario == "A":
-        return config.total_mass_ton
+def elevator_mass(config: Task4Config, deliverable_ton: float, direct_mass_ton: float) -> float:
     if config.scenario == "B":
         return 0.0
-    return max(0.0, config.total_mass_ton - n_launch_total * config.cap_rock_ton)
+    return max(0.0, deliverable_ton - direct_mass_ton)
 
 
 def compute_rocket_emissions(n_launch_total: int, bc_ei_g_per_kg: float) -> Dict[str, float]:
@@ -276,7 +274,31 @@ def main() -> None:
     if n_launch_total is None:
         n_launch_total = infer_n_launch_total(config)
 
-    mass_elevator_ton = elevator_mass(config, n_launch_total)
+    direct_mass_ton = 0.0
+    if config.scenario in ("B", "C"):
+        direct_mass_ton = min(
+            config.total_mass_ton, n_launch_total * config.cap_rock_ton
+        )
+
+    elev_cap_ton = 0.0
+    orbit_cap_ton = 0.0
+    deliverable_elevator_ton = 0.0
+    if config.scenario in ("A", "C"):
+        elev_cap_ton = config.cap_se_ton_per_year * config.project_years
+        orbit_cap_ton = (
+            n_launch_total
+            * config.f_cycle_per_year
+            * config.cap_rock_ton
+            * config.project_years
+        )
+        remaining = max(0.0, config.total_mass_ton - direct_mass_ton)
+        deliverable_elevator_ton = min(remaining, elev_cap_ton, orbit_cap_ton)
+
+    deliverable_ton = direct_mass_ton + deliverable_elevator_ton
+    if deliverable_ton > config.total_mass_ton:
+        deliverable_ton = config.total_mass_ton
+    infeasible = deliverable_ton + 1.0e-9 < config.total_mass_ton
+    mass_elevator_ton = elevator_mass(config, deliverable_ton, direct_mass_ton)
     launches_per_year = n_launch_total / config.project_years
 
     rocket = compute_rocket_emissions(n_launch_total, config.bc_ei_g_per_kg)
@@ -290,7 +312,14 @@ def main() -> None:
     )
 
     total_co2e = rocket["total_co2e_ton"] + elevator["co2_ton"]
-    ci = total_co2e / config.total_mass_ton if config.total_mass_ton > 0 else 0.0
+    if deliverable_ton > 0:
+        ci = total_co2e / deliverable_ton
+    else:
+        ci = None
+
+    years_needed_elevator = None
+    if config.cap_se_ton_per_year > 0:
+        years_needed_elevator = config.total_mass_ton / config.cap_se_ton_per_year
 
     caps_detail, caps_summary = compute_caps(
         config.site_caps,
@@ -308,7 +337,14 @@ def main() -> None:
         "project_years": config.project_years,
         "n_launch_total": n_launch_total,
         "launches_per_year": launches_per_year,
+        "deliverable_ton": deliverable_ton,
+        "deliverable_shortfall_ton": max(0.0, config.total_mass_ton - deliverable_ton),
+        "infeasible": infeasible,
+        "mass_rocket_direct_ton": direct_mass_ton,
         "mass_elevator_ton": mass_elevator_ton,
+        "elevator_cap_ton": elev_cap_ton,
+        "orbit_cap_ton": orbit_cap_ton,
+        "years_needed_elevator": years_needed_elevator,
         "alpha_climate": config.alpha_climate,
         "grid_intensity": config.grid_intensity,
         "rocket_emissions": rocket,
