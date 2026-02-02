@@ -1,0 +1,25 @@
+{
+  "scenarios": {
+    "A": {
+      "T": { "mean": null, "p95": null },
+      "C": { "mean": null, "p95": null },
+      "N_fail": { "mean": null, "p95": null },
+      "S_moon": { "mean": null, "p95": null },
+      "E_impact": { "mean": 7400000.0, "p95": null }
+    },
+    "B": {
+      "T": { "mean": null, "p95": null },
+      "C": { "mean": null, "p95": null },
+      "N_fail": { "mean": null, "p95": null },
+      "S_moon": { "mean": null, "p95": null },
+      "E_impact": { "mean": 2140000000.0, "p95": null }
+    },
+    "C": {
+      "T": { "mean": 189.20823336300882, "p95": null },
+      "C": { "mean": null, "p95": null },
+      "N_fail": { "mean": 9931.0, "p95": null },
+      "S_moon": { "mean": null, "p95": null },
+      "E_impact": { "mean": 33957400.0, "p95": null }
+    }
+  }
+}
