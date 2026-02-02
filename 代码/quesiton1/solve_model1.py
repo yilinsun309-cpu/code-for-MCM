@@ -29,6 +29,8 @@ class Params:
     Cap_Rock: float = 125.0  # ton/launch
     f_total: float = 3834.0  # launches/yr
     f_cycle: float = 60.0  # cycles/yr per rocket
+    tau23: float = 6.0 / 365.0  # yr, Earth launch -> lunar unload lead time
+    tau_transit: float = 0.0  # yr, elevator ground->apex delay
 
     # Cost parameters (USD)
     C_launch: float = 1.5e8  # USD/launch
@@ -210,8 +212,57 @@ def scenario_c(
     n_low_override: Optional[int] = None,
     n_high_override: Optional[int] = None,
 ) -> Dict[str, Any]:
-    """Enumerate and solve Scenario C (Hybrid) with Pareto analysis."""
-    N_low = int(math.ceil(params.Cap_SE / (params.f_cycle * params.Cap_Rock)))
+    """Enumerate and solve Scenario C (Hybrid) with parallel-flow time model."""
+
+    def completion_time_and_masses(N: int) -> Tuple[float, float, float]:
+        """Return (T, M_direct(T), M_apex(T)) using piecewise-linear delivery."""
+        cap_r = params.Cap_Rock
+        f_total = params.f_total
+        tau23 = params.tau23
+        tau_transit = params.tau_transit
+        R_apex = min(params.Cap_SE, N * params.f_cycle * cap_r)
+
+        def m_direct(t: float) -> float:
+            delivered = f_total * max(t - tau23, 0.0)
+            return cap_r * min(N, delivered)
+
+        def m_apex(t: float) -> float:
+            return R_apex * max(t - tau_transit, 0.0)
+
+        # Breakpoints where slope changes
+        t_sat = tau23 + (N / f_total if f_total > 0 else math.inf)
+        breaks = sorted({tau23, tau_transit, t_sat})
+        breaks.append(math.inf)
+
+        t_prev = 0.0
+        mass_prev = 0.0
+        for t_next in breaks:
+            # Update mass at interval start
+            mass_prev = m_direct(t_prev) + m_apex(t_prev)
+            if mass_prev >= params.M_goal:
+                return t_prev, m_direct(t_prev), m_apex(t_prev)
+
+            rate_direct = cap_r * f_total if (tau23 <= t_prev < t_sat) else 0.0
+            rate_apex = R_apex if (tau_transit <= t_prev) else 0.0
+            rate_total = rate_direct + rate_apex
+
+            if rate_total <= 0.0:
+                t_prev = t_next
+                continue
+
+            time_need = (params.M_goal - mass_prev) / rate_total
+            if t_prev + time_need <= t_next:
+                t_star = t_prev + time_need
+                return t_star, m_direct(t_star), m_apex(t_star)
+
+            t_prev = t_next
+
+        # Fallback (should not reach)
+        t_star = t_prev
+        return t_star, m_direct(t_star), m_apex(t_star)
+
+    # Search bounds per Eq. (N_range_C)
+    N_low = 0
     N_high = int(math.ceil(params.M_goal / params.Cap_Rock))
     if n_low_override is not None:
         N_low = int(n_low_override)
@@ -225,36 +276,54 @@ def scenario_c(
         N_low = N_high
 
     N = np.arange(N_low, N_high + 1, dtype=int)
-    M_direct = N.astype(float) * params.Cap_Rock
-    M_se = np.maximum(0.0, params.M_goal - M_direct)
+    T_list: List[float] = []
+    C_list: List[float] = []
+    M_se_list: List[float] = []
+    R_list: List[float] = []
+    T_deploy_list: List[float] = []
+    T_remain_list: List[float] = []
+    M_direct_list: List[float] = []
 
-    R = np.minimum(params.Cap_SE, N.astype(float) * params.f_cycle * params.Cap_Rock)
+    for n in N:
+        T_star, M_direct_T, M_apex_T = completion_time_and_masses(int(n))
+        # Effective elevator-delivered mass (throttled to needed remainder)
+        M_se_T = max(0.0, min(M_apex_T, params.M_goal - M_direct_T))
+        R_apex = min(params.Cap_SE, n * params.f_cycle * params.Cap_Rock)
+        T_deploy = n / params.f_total if params.f_total > 0 else math.inf
+        T_remain = max(0.0, T_star - max(params.tau23, params.tau_transit))
 
-    T_remain = np.zeros_like(R, dtype=float)
-    mask_R_pos = R > 0
-    T_remain[mask_R_pos] = M_se[mask_R_pos] / R[mask_R_pos]
-    mask_R_zero = ~mask_R_pos
-    T_remain[mask_R_zero] = np.where(M_se[mask_R_zero] == 0.0, 0.0, np.inf)
+        C_launch = cost_per_launch(T_star, params)
+        C_total = (
+            C_launch * n
+            + params.C_elec_unit * M_se_T
+            + (params.C_maint + params.C_TV_fixed) * T_star
+        )
 
-    T_deploy = N.astype(float) / params.f_total
-    T = np.maximum(T_deploy, T_remain)
+        T_list.append(T_star)
+        C_list.append(C_total)
+        M_se_list.append(M_se_T)
+        R_list.append(R_apex)
+        T_deploy_list.append(T_deploy)
+        T_remain_list.append(T_remain)
+        M_direct_list.append(M_direct_T)
 
-    feasible_mask = np.isfinite(T)
+    T_arr = np.array(T_list, dtype=float)
+    C_arr = np.array(C_list, dtype=float)
+    M_se_arr = np.array(M_se_list, dtype=float)
+    R_arr = np.array(R_list, dtype=float)
+    T_deploy_arr = np.array(T_deploy_list, dtype=float)
+    T_remain_arr = np.array(T_remain_list, dtype=float)
+    M_direct_arr = np.array(M_direct_list, dtype=float)
+
+    feasible_mask = np.isfinite(T_arr) & np.isfinite(C_arr)
     N_f = N[feasible_mask]
-    M_se_f = M_se[feasible_mask]
-    R_f = R[feasible_mask]
-    T_f = T[feasible_mask]
-    T_deploy_f = T_deploy[feasible_mask]
-    T_remain_f = T_remain[feasible_mask]
-    M_direct_f = M_direct[feasible_mask]
-
-    C_launch = cost_per_launch(T_f, params)
-    C_total = (
-        C_launch * N_f
-        + params.C_elec_unit * M_se_f
-        + params.C_maint * T_f
-        + params.C_TV_fixed
-    )
+    M_se_f = M_se_arr[feasible_mask]
+    R_f = R_arr[feasible_mask]
+    T_f = T_arr[feasible_mask]
+    T_deploy_f = T_deploy_arr[feasible_mask]
+    T_remain_f = T_remain_arr[feasible_mask]
+    M_direct_f = M_direct_arr[feasible_mask]
+    C_total = C_arr[feasible_mask]
 
     pareto_mask = pareto_front_mask(T_f, C_total)
 
