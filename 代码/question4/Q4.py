@@ -302,10 +302,8 @@ def main() -> None:
         n_launch_total = infer_n_launch_total(config)
 
     direct_mass_ton = 0.0
-    if config.scenario in ("B", "C"):
-        direct_mass_ton = min(
-            config.total_mass_ton, n_launch_total * config.cap_rock_ton
-        )
+    if config.scenario == "B":
+        direct_mass_ton = min(config.total_mass_ton, n_launch_total * config.cap_rock_ton)
 
     elev_cap_ton = None
     orbit_cap_ton = None
@@ -319,14 +317,8 @@ def main() -> None:
         elev_cap_ton = (
             config.cap_se_ton_per_year * config.project_years * config.elevator_towers
         )
-        orbit_cap_ton = (
-            n_launch_total
-            * config.f_cycle_per_year
-            * config.cap_rock_ton
-            * config.project_years
-        )
-        remaining = max(0.0, config.total_mass_ton - direct_mass_ton)
-        deliverable_elevator_ton = min(remaining, elev_cap_ton, orbit_cap_ton)
+        # For environmental accounting, require n_launch_total from DES logs; do not infer orbital throughput here.
+        deliverable_elevator_ton = min(config.total_mass_ton, elev_cap_ton)
 
     deliverable_ton = direct_mass_ton + deliverable_elevator_ton
     if deliverable_ton > config.total_mass_ton:
@@ -361,6 +353,7 @@ def main() -> None:
         config.alpha_climate,
         launches_per_year,
         config.launch_plan,
+        f_green=config.f_green,
     )
 
     summary = {
