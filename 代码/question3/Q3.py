@@ -45,6 +45,7 @@ DEFAULT_CAP_ROCK = 125.0
 DEFAULT_F_TOTAL = 3834.0
 DEFAULT_TAU_DAYS = {1: 3.0, 2: 3.0, 3: 3.0, 4: 3.0, 5: 3.0}
 DEFAULT_DELTA_TAU_DAYS = 0.0
+DEFAULT_ELEVATOR_DELAY_DAYS = 14.0
 DEFAULT_P_FAIL = {1: 0.0, 2: 1.78e-2, 3: 1.0e-3, 4: 1.03e-2, 5: 0.0}
 DEFAULT_I_SAFE = 70
 DEFAULT_DELTA_REPLACEMENT_DAYS = 2.0
@@ -96,6 +97,7 @@ class Task3Params:
         }
     )
     delta_tau: float = DEFAULT_DELTA_TAU_DAYS / DAYS_PER_YEAR
+    elevator_delay: float = DEFAULT_ELEVATOR_DELAY_DAYS / DAYS_PER_YEAR
     p_fail: Dict[int, float] = field(
         default_factory=lambda: DEFAULT_P_FAIL.copy()
     )
@@ -230,6 +232,8 @@ def validate_params(params: Task3Params) -> None:
         raise ValueError("f_total must be > 0")
     if params.I_safe < 0:
         raise ValueError("I_safe must be >= 0")
+    if params.elevator_delay < 0:
+        raise ValueError("elevator_delay must be >= 0")
     if not (0.0 < params.alpha <= 1.0):
         raise ValueError("alpha must be within (0, 1]")
     if params.r_degrade_start is not None and params.r_degrade_end is not None:
@@ -434,7 +438,10 @@ class Task3Simulator:
         if dt < 0:
             return
         if self.cap_eff > 0:
-            self.S += self.cap_eff * dt
+            delay = self.params.elevator_delay
+            dt_supply = max(0.0, reached_t - delay) - max(0.0, start_t - delay)
+            if dt_supply > 0:
+                self.S += self.cap_eff * dt_supply
         self.t = reached_t
 
     def schedule_inventory_event(self) -> None:
@@ -449,7 +456,11 @@ class Task3Simulator:
         needed = r.payload - self.S
         if needed <= 0:
             return
-        ready_time = self.t + needed / self.cap_eff
+        delay = self.params.elevator_delay
+        if self.t < delay:
+            ready_time = delay + needed / self.cap_eff
+        else:
+            ready_time = self.t + needed / self.cap_eff
         if self.inventory_event_time is None or ready_time < self.inventory_event_time:
             self.inventory_event_time = ready_time
             self.schedule_event(ready_time, "inventory")
@@ -742,6 +753,7 @@ def main() -> None:
     parser.add_argument("--w-agri", type=float, default=None, help="Agriculture water use (kg/m^2/day)")
     parser.add_argument("--w-payload", type=float, default=None, help="Payload/ops water (kg/person/day)")
     parser.add_argument("--extra-loss", type=float, default=None, help="Extra loss fraction beyond recovery")
+    parser.add_argument("--elevator-delay", type=float, default=None, help="Elevator one-way delay (days)")
     parser.add_argument("--r-base", type=float, default=None, help="Baseline recovery rate")
     parser.add_argument("--delta-r", type=float, default=None, help="Recovery drop during degradation")
     parser.add_argument("--r-degrade-start", type=float, default=None, help="Degradation start day")
@@ -775,6 +787,8 @@ def main() -> None:
         data["w_payload"] = args.w_payload
     if args.extra_loss is not None:
         data["extra_loss_frac"] = args.extra_loss
+    if args.elevator_delay is not None:
+        data["elevator_delay"] = args.elevator_delay / DAYS_PER_YEAR
     if args.r_base is not None:
         data["r_base"] = args.r_base
     if args.delta_r is not None:
