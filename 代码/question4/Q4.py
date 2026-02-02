@@ -152,7 +152,7 @@ def compute_caps(
     site_caps: Dict[str, float],
     alpha_climate: float,
     launches_per_year: float,
-    n_launch_total: float,
+    n_launch_total: Optional[float],
     launch_plan: Optional[Dict[str, float]],
     f_green: Optional[Dict[str, float]] = None,
 ) -> Tuple[Dict[str, Dict[str, float]], Dict[str, float]]:
@@ -201,7 +201,7 @@ def compute_caps(
         "launches_total": launches_per_year,
         "cap_violation": launches_per_year > total_cap if total_cap > 0 else False,
         "max_utilization": max((d["utilization"] for d in detail.values()), default=0.0),
-        "years_lower_bound_due_to_caps": (n_launch_total / total_cap) if total_cap > 0 else None,
+        "years_lower_bound_due_to_caps": (n_launch_total / total_cap) if (n_launch_total is not None and total_cap > 0) else None,
     }
     return detail, summary
 
