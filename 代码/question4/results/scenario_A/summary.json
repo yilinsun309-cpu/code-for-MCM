@@ -1,0 +1,167 @@
+{
+  "parameters": {
+    "scenario": "A",
+    "total_mass_ton": 100000000.0,
+    "cap_rock_ton": 125.0,
+    "cap_se_ton_per_year": 179000.0,
+    "elevator_towers": 3.0,
+    "f_cycle_per_year": 60.0,
+    "n_launch_total": null,
+    "project_years": 1.0,
+    "bc_ei_g_per_kg": 15.0,
+    "alpha_climate": 0.1,
+    "beta_strat": 1.0,
+    "grid_intensity": 0.005,
+    "site_caps": {
+      "Alaska": 10.0,
+      "Florida": 2300.0,
+      "California": 950.0,
+      "Texas": 190.0,
+      "Virginia": 70.0,
+      "Mahia": 140.0,
+      "Taiyuan": 100.0,
+      "SatishDhawan": 35.0,
+      "Kazakhstan": 25.0,
+      "FrenchGuiana": 24.0
+    },
+    "launch_plan": null,
+    "f_green": null,
+    "delivered_ton": null,
+    "elevator_mass_ton": null,
+    "direct_mass_ton": null
+  },
+  "scenario": "A",
+  "total_mass_ton": 100000000.0,
+  "cap_rock_ton": 125.0,
+  "cap_se_ton_per_year": 179000.0,
+  "elevator_towers": 3.0,
+  "f_cycle_per_year": 60.0,
+  "project_years": 1.0,
+  "n_launch_total": 0,
+  "launches_per_year": 0.0,
+  "deliverable_ton": 537000.0,
+  "deliverable_shortfall_ton": 99463000.0,
+  "infeasible": true,
+  "mass_rocket_direct_ton": 0.0,
+  "mass_elevator_ton": 537000.0,
+  "elevator_cap_ton": null,
+  "orbit_cap_ton": null,
+  "years_needed_elevator": 186.21973929236498,
+  "alpha_climate": 0.1,
+  "grid_intensity": 0.005,
+  "rocket_emissions": {
+    "n_launch_total": 0.0,
+    "co2_ton_per_launch": 1161.0,
+    "co2e_ton_per_launch": 2675.0,
+    "co2_from_rp1_ton_per_launch": 1247.0115,
+    "bc_ton_per_launch": 5.9325,
+    "bc_ton_per_launch_min": 3.955,
+    "bc_ton_per_launch_max": 7.91,
+    "nox_ton_per_launch": 5.537,
+    "total_co2_ton": 0.0,
+    "total_co2e_ton": 0.0,
+    "total_bc_ton": 0.0,
+    "total_bc_ton_min": 0.0,
+    "total_bc_ton_max": 0.0,
+    "total_nox_ton": 0.0,
+    "fuel_total_ton_per_launch": 1332.6
+  },
+  "elevator_emissions": {
+    "mass_ton": 537000.0,
+    "energy_kwh": 7947600000.0,
+    "co2_ton": 39738.0
+  },
+  "strat_proxy_ton_fuel": 0.0,
+  "total_co2e_ton": 39738.0,
+  "carbon_intensity_ton_per_ton": 0.074,
+  "site_caps": {
+    "Alaska": {
+      "cap_base": 10.0,
+      "cap_env": 100.0,
+      "cap_green": Infinity,
+      "cap_binding": 100.0,
+      "launches": 0.0,
+      "utilization": 0.0
+    },
+    "Florida": {
+      "cap_base": 2300.0,
+      "cap_env": 23000.0,
+      "cap_green": Infinity,
+      "cap_binding": 23000.0,
+      "launches": 0.0,
+      "utilization": 0.0
+    },
+    "California": {
+      "cap_base": 950.0,
+      "cap_env": 9500.0,
+      "cap_green": Infinity,
+      "cap_binding": 9500.0,
+      "launches": 0.0,
+      "utilization": 0.0
+    },
+    "Texas": {
+      "cap_base": 190.0,
+      "cap_env": 1900.0,
+      "cap_green": Infinity,
+      "cap_binding": 1900.0,
+      "launches": 0.0,
+      "utilization": 0.0
+    },
+    "Virginia": {
+      "cap_base": 70.0,
+      "cap_env": 700.0,
+      "cap_green": Infinity,
+      "cap_binding": 700.0,
+      "launches": 0.0,
+      "utilization": 0.0
+    },
+    "Mahia": {
+      "cap_base": 140.0,
+      "cap_env": 1400.0,
+      "cap_green": Infinity,
+      "cap_binding": 1400.0,
+      "launches": 0.0,
+      "utilization": 0.0
+    },
+    "Taiyuan": {
+      "cap_base": 100.0,
+      "cap_env": 1000.0,
+      "cap_green": Infinity,
+      "cap_binding": 1000.0,
+      "launches": 0.0,
+      "utilization": 0.0
+    },
+    "SatishDhawan": {
+      "cap_base": 35.0,
+      "cap_env": 350.0,
+      "cap_green": Infinity,
+      "cap_binding": 350.0,
+      "launches": 0.0,
+      "utilization": 0.0
+    },
+    "Kazakhstan": {
+      "cap_base": 25.0,
+      "cap_env": 250.0,
+      "cap_green": Infinity,
+      "cap_binding": 250.0,
+      "launches": 0.0,
+      "utilization": 0.0
+    },
+    "FrenchGuiana": {
+      "cap_base": 24.0,
+      "cap_env": 240.0,
+      "cap_green": Infinity,
+      "cap_binding": 240.0,
+      "launches": 0.0,
+      "utilization": 0.0
+    }
+  },
+  "site_caps_summary": {
+    "k_env": 10.0,
+    "cap_total": 38440.0,
+    "launches_total": 0.0,
+    "cap_violation": false,
+    "max_utilization": 0.0,
+    "years_lower_bound_due_to_caps": 0.0
+  }
+}
