@@ -379,6 +379,20 @@ class Task3Simulator:
         self.seq += 1
         heapq.heappush(self.pq, Event(time=time, seq=self.seq, etype=etype, rid=rid))
 
+    def reserve_launch_slot(self, t_ready: float) -> float:
+        """
+        Reserve an Earth launch slot at/after t_ready.
+        Updates max_launch_wait and next_launch_slot.
+        Returns the actual launch start time.
+        """
+        t_start = max(t_ready, self.next_launch_slot)
+        wait = t_start - t_ready
+        wait_days = wait * DAYS_PER_YEAR
+        if wait_days > self.max_launch_wait:
+            self.max_launch_wait = wait_days
+        self.next_launch_slot = t_start + self.launch_slot_interval
+        return t_start
+
     def active_count(self) -> int:
         return sum(1 for r in self.rocks.values() if r.state != 6)
 
@@ -534,7 +548,8 @@ class Task3Simulator:
 
     def handle_insert(self) -> None:
         self.pending_replacements = max(0, self.pending_replacements - 1)
-        self.add_rocket(self.start_state, start_time=self.t)
+        # Launch slot already reserved when scheduling this insert
+        self.add_rocket(self.start_state)
         self.launches += 1
         self.update_deficit()
 
@@ -576,6 +591,11 @@ class Task3Simulator:
             return
 
         r.state = next_state
+        if next_state == 2:
+            # Any Earth launch must queue for a launch slot
+            t_start = self.reserve_launch_slot(self.t)
+            self.schedule_event(t_start + self.tau_robust[2], "rocket", rid=rid)
+            return
         if next_state == 3 and requires_inventory(self.params.scenario, state, next_state):
             r.loaded_from_elevator = True
             if self.cap_eff <= 0:
