@@ -37,6 +37,9 @@ DEFAULT_DOWN_RATIO = (0.0, 0.1)
 DEFAULT_INITIAL_ROCKETS = None
 DEFAULT_MAX_TIME_YEARS = 200.0
 DEFAULT_SEED = 1
+DEFAULT_LOG_EVERY = 10000
+DEFAULT_MC_LOG_EVERY = 1
+DEFAULT_VERBOSE = False
 
 
 @dataclass(frozen=True)
@@ -318,7 +321,11 @@ class Task2Simulator:
         else:
             self.schedule_event(self.t + self.tau_robust[next_state], "rocket", rid=rid)
 
-    def run(self) -> SimulationResult:
+    def run(
+        self,
+        log_every: int = DEFAULT_LOG_EVERY,
+        verbose: bool = DEFAULT_VERBOSE,
+    ) -> SimulationResult:
         init_count = self.params.initial_rockets
         if init_count is None:
             init_count = self.params.I_safe
@@ -327,11 +334,20 @@ class Task2Simulator:
             self.add_rocket(self.start_state)
 
         completed = False
+        event_count = 0
+        if verbose:
+            print(
+                "[开始] "
+                f"场景={self.params.scenario} I0={init_count} "
+                f"M_goal={self.params.M_goal} cap_eff={self.cap_eff:.2f}",
+                flush=True,
+            )
         while self.pq:
             ev = heapq.heappop(self.pq)
             if ev.time > self.params.max_time:
                 break
             self.fluid_update(ev.time)
+            event_count += 1
 
             if ev.etype == "inventory":
                 if self.inventory_event_time is None:
@@ -350,6 +366,26 @@ class Task2Simulator:
             if self.M >= self.params.M_goal:
                 completed = True
                 break
+
+            if verbose and log_every > 0 and event_count % log_every == 0:
+                pct = self.M / self.params.M_goal * 100.0
+                print(
+                    "[进度] "
+                    f"事件={event_count} t={self.t:.2f} "
+                    f"M={self.M:.2f}/{self.params.M_goal:.2f}({pct:.2f}%) "
+                    f"失败={self.failures} 现役={self.active_count()} "
+                    f"等待={len(self.waiting)} 库存={self.S:.2f}",
+                    flush=True,
+                )
+
+        if verbose:
+            pct = self.M / self.params.M_goal * 100.0
+            print(
+                "[结束] "
+                f"t={self.t:.2f} M={self.M:.2f}/{self.params.M_goal:.2f}({pct:.2f}%) "
+                f"失败={self.failures} 发射={self.launches}",
+                flush=True,
+            )
 
         return SimulationResult(
             T_star=self.t,
@@ -387,11 +423,19 @@ def summarize_results(results: List[SimulationResult]) -> Dict[str, Any]:
     }
 
 
-def run_monte_carlo(params: Task2Params, n_runs: int) -> Tuple[List[SimulationResult], Dict[str, Any]]:
+def run_monte_carlo(
+    params: Task2Params,
+    n_runs: int,
+    verbose: bool = DEFAULT_VERBOSE,
+    log_every: int = DEFAULT_LOG_EVERY,
+    mc_log_every: int = DEFAULT_MC_LOG_EVERY,
+) -> Tuple[List[SimulationResult], Dict[str, Any]]:
     results: List[SimulationResult] = []
     for i in range(n_runs):
+        if mc_log_every > 0 and i % mc_log_every == 0:
+            print(f"[MC] 运行 {i + 1}/{n_runs}", flush=True)
         sim = Task2Simulator(params, seed=params.seed + i)
-        results.append(sim.run())
+        results.append(sim.run(verbose=verbose, log_every=log_every))
     summary = summarize_results(results)
     return results, summary
 
@@ -402,6 +446,9 @@ def main() -> None:
     parser.add_argument("--scenario", type=int, default=None, help="Scenario 1/2/3")
     parser.add_argument("--n-mc", type=int, default=50, help="Monte Carlo runs")
     parser.add_argument("--seed", type=int, default=None, help="Random seed")
+    parser.add_argument("--verbose", action="store_true", help="Enable per-event logs")
+    parser.add_argument("--log-every", type=int, default=DEFAULT_LOG_EVERY, help="Log per N events")
+    parser.add_argument("--mc-log-every", type=int, default=DEFAULT_MC_LOG_EVERY, help="Log per N MC runs")
     args = parser.parse_args()
 
     params = Task2Params()
@@ -415,7 +462,13 @@ def main() -> None:
 
     validate_params(params)
 
-    _, summary = run_monte_carlo(params, n_runs=args.n_mc)
+    _, summary = run_monte_carlo(
+        params,
+        n_runs=args.n_mc,
+        verbose=args.verbose,
+        log_every=args.log_every,
+        mc_log_every=args.mc_log_every,
+    )
     print(json.dumps(summary, indent=2))
 
 
