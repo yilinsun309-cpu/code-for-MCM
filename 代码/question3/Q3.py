@@ -46,6 +46,7 @@ DEFAULT_F_TOTAL = 3834.0
 DEFAULT_TAU_DAYS = {1: 3.0, 2: 3.0, 3: 3.0, 4: 3.0, 5: 3.0}
 DEFAULT_DELTA_TAU_DAYS = 0.0
 DEFAULT_ELEVATOR_DELAY_DAYS = 14.0
+DEFAULT_MIN_CYCLE_DAYS = 6.0
 DEFAULT_P_FAIL = {1: 0.0, 2: 1.78e-2, 3: 1.0e-3, 4: 1.03e-2, 5: 0.0}
 DEFAULT_I_SAFE = 70
 DEFAULT_DELTA_REPLACEMENT_DAYS = 2.0
@@ -98,6 +99,7 @@ class Task3Params:
     )
     delta_tau: float = DEFAULT_DELTA_TAU_DAYS / DAYS_PER_YEAR
     elevator_delay: float = DEFAULT_ELEVATOR_DELAY_DAYS / DAYS_PER_YEAR
+    min_delivery_interval: float = DEFAULT_MIN_CYCLE_DAYS / DAYS_PER_YEAR
     p_fail: Dict[int, float] = field(
         default_factory=lambda: DEFAULT_P_FAIL.copy()
     )
@@ -152,6 +154,7 @@ class Rocket:
     state: int
     payload: float
     loaded_from_elevator: Optional[bool] = None
+    last_delivery_time: Optional[float] = None
 
 
 def load_config(path: str) -> Dict[str, Any]:
@@ -187,6 +190,8 @@ def apply_overrides(params: Task3Params, overrides: Dict[str, Any]) -> Task3Para
     if "tau_days" in overrides:
         tau_days = _normalize_int_key_dict(overrides["tau_days"])
         data["tau"] = {k: v / DAYS_PER_YEAR for k, v in tau_days.items()}
+    if "min_cycle_days" in overrides:
+        data["min_delivery_interval"] = float(overrides["min_cycle_days"]) / DAYS_PER_YEAR
     if "p_fail" in overrides:
         data["p_fail"] = _normalize_int_key_dict(overrides["p_fail"])
     if "down_ratio" in overrides:
@@ -234,6 +239,8 @@ def validate_params(params: Task3Params) -> None:
         raise ValueError("I_safe must be >= 0")
     if params.elevator_delay < 0:
         raise ValueError("elevator_delay must be >= 0")
+    if params.min_delivery_interval < 0:
+        raise ValueError("min_delivery_interval must be >= 0")
     if not (0.0 < params.alpha <= 1.0):
         raise ValueError("alpha must be within (0, 1]")
     if params.r_degrade_start is not None and params.r_degrade_end is not None:
@@ -371,6 +378,17 @@ class Task3Simulator:
         self.rocks[rid] = Rocket(rid=rid, state=init_state, payload=self.q_water)
         self.schedule_event(self.t + self.tau_robust[init_state], "rocket", rid=rid)
 
+    def schedule_program3(self, rid: int, start_time: float) -> None:
+        r = self.rocks.get(rid)
+        if r is None:
+            return
+        completion = start_time + self.tau_robust[3]
+        if r.last_delivery_time is not None:
+            min_complete = r.last_delivery_time + self.params.min_delivery_interval
+            if completion < min_complete:
+                completion = min_complete
+        self.schedule_event(completion, "rocket", rid=rid)
+
     def _segments_in_days(self, d0: float, d1: float) -> List[Tuple[float, float, float]]:
         if (
             self.params.delta_r <= 0
@@ -482,7 +500,7 @@ class Task3Simulator:
                 if wait_days > self.max_inventory_wait:
                     self.max_inventory_wait = wait_days
             self.S -= r.payload
-            self.schedule_event(self.t + self.tau_robust[3], "rocket", rid=rid)
+            self.schedule_program3(rid, self.t)
         if self.waiting:
             self.schedule_inventory_event()
 
@@ -508,7 +526,7 @@ class Task3Simulator:
         self.launches += 1
         self.update_deficit()
 
-    def record_arrival(self, from_elevator: Optional[bool]) -> None:
+    def record_arrival(self, rid: int, from_elevator: Optional[bool]) -> None:
         arrival_day = self.t * DAYS_PER_YEAR
         gap = arrival_day - self.last_arrival_day
         if gap > self.max_gap_days:
@@ -520,6 +538,9 @@ class Task3Simulator:
         self.W += self.q_water
         if self.W < self.min_W:
             self.min_W = self.W
+        r = self.rocks.get(rid)
+        if r is not None:
+            r.last_delivery_time = self.t
 
     def handle_rocket_event(self, rid: int) -> None:
         r = self.rocks.get(rid)
@@ -528,7 +549,7 @@ class Task3Simulator:
         state = r.state
 
         if state == 3:
-            self.record_arrival(r.loaded_from_elevator)
+            self.record_arrival(rid, r.loaded_from_elevator)
 
         pf = self.params.p_fail.get(state, 0.0)
         if self.rng.random() < pf:
@@ -549,7 +570,7 @@ class Task3Simulator:
                 return
             if self.S >= r.payload:
                 self.S -= r.payload
-                self.schedule_event(self.t + self.tau_robust[3], "rocket", rid=rid)
+                self.schedule_program3(rid, self.t)
             else:
                 self.waiting.append(rid)
                 self.waiting_since[rid] = self.t
@@ -559,7 +580,9 @@ class Task3Simulator:
         else:
             if next_state == 3:
                 r.loaded_from_elevator = False
-            self.schedule_event(self.t + self.tau_robust[next_state], "rocket", rid=rid)
+                self.schedule_program3(rid, self.t)
+            else:
+                self.schedule_event(self.t + self.tau_robust[next_state], "rocket", rid=rid)
 
     def run(
         self,
@@ -754,6 +777,7 @@ def main() -> None:
     parser.add_argument("--w-payload", type=float, default=None, help="Payload/ops water (kg/person/day)")
     parser.add_argument("--extra-loss", type=float, default=None, help="Extra loss fraction beyond recovery")
     parser.add_argument("--elevator-delay", type=float, default=None, help="Elevator one-way delay (days)")
+    parser.add_argument("--min-cycle-days", type=float, default=None, help="Minimum delivery interval per rocket (days)")
     parser.add_argument("--r-base", type=float, default=None, help="Baseline recovery rate")
     parser.add_argument("--delta-r", type=float, default=None, help="Recovery drop during degradation")
     parser.add_argument("--r-degrade-start", type=float, default=None, help="Degradation start day")
@@ -789,6 +813,8 @@ def main() -> None:
         data["extra_loss_frac"] = args.extra_loss
     if args.elevator_delay is not None:
         data["elevator_delay"] = args.elevator_delay / DAYS_PER_YEAR
+    if args.min_cycle_days is not None:
+        data["min_delivery_interval"] = args.min_cycle_days / DAYS_PER_YEAR
     if args.r_base is not None:
         data["r_base"] = args.r_base
     if args.delta_r is not None:
