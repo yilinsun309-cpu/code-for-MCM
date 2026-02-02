@@ -33,7 +33,15 @@ DEFAULT_TAU_DAYS = {1: 3.0, 2: 3.0, 3: 3.0, 4: 3.0, 5: 3.0}
 DEFAULT_DELTA_TAU_DAYS = 0.0
 DEFAULT_TAU_TRANSIT_DAYS = 14.0  # ground->apex elevator delay (paper baseline)
 # Baseline failure probabilities mapped from segmented return/dock data (paper Table~failure_prob_task2)
-DEFAULT_P_FAIL = {1: 1.78e-2, 2: 1.78e-2, 3: 1.0e-3, 4: 1.03e-2, 5: 3.6e-4}
+# Failure probabilities (baseline): combine launch+dock for Program 1, keep direct launch for 2,
+# keep burn leg for 3, combine return+dock for 4 (approx), small return for 5.
+DEFAULT_P_FAIL = {
+    1: 1.0 - (1.0 - 1.78e-2) * (1.0 - 1.03e-2),  # launch + dock combo ≈ 2.80%
+    2: 1.78e-2,  # ground launch
+    3: 1.0e-3,   # transfer leg
+    4: 1.0 - (1.0 - 1.0e-3) * (1.0 - 1.03e-2),   # return + dock combo ≈ 1.13%
+    5: 3.6e-4,   # return-to-site
+}
 DEFAULT_FAIL_COST = {1: 0.0, 2: 0.0, 3: 0.0, 4: 0.0, 5: 0.0}
 DEFAULT_C_LAUNCH = 1.5e7
 DEFAULT_I_SAFE = 72
@@ -185,7 +193,10 @@ def phi_for_scenario(scenario: int) -> Dict[int, int]:
 
 
 def start_state_for_scenario(scenario: int) -> int:
-    return 1 if scenario == 1 else 2
+    # For Task 2 we assume the fleet has already been deployed (steady-state baseline).
+    # Scenario 1/3: rockets reside at Apex ready to load/dispatch (state 4 -> 3).
+    # Scenario 2: rockets start from ground launch cycle (state 2).
+    return 4 if scenario in (1, 3) else 2
 
 
 def requires_inventory(scenario: int, from_state: int, to_state: int) -> bool:
